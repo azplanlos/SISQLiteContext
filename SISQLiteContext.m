@@ -16,7 +16,7 @@
 
 static SISQLiteContext* _sisqlitecontext;
 
-@synthesize cacheItemSize;
+@synthesize cacheItemSize, idField;
 
 +(SISQLiteContext*)SQLiteContext {
     @synchronized([SISQLiteContext class]) {
@@ -38,8 +38,9 @@ static SISQLiteContext* _sisqlitecontext;
 -(id)init {
     self = [super init];
     if (self != nil) {
-        self.cacheItemSize = 100;
+        self.cacheItemSize = 10000;
         cacheStatements = [[NSMutableArray alloc] init];
+        idField = @"ID";
     }
     return self;
 }
@@ -76,6 +77,9 @@ static SISQLiteContext* _sisqlitecontext;
             NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT);", stableName];
             [self.database executeUpdate:query];
             NSLog(@"created table %@", stableName);
+        } else {
+            NSString* query = [NSString stringWithFormat:@"delete from %@ where rowid not in (select  min(rowid) from %@ group by %@);", stableName, stableName, idField];
+            [self.database executeUpdate:query];
         }
         
         NSString* query = [NSString stringWithFormat:@"PRAGMA table_info('%@');", stableName];
@@ -132,10 +136,14 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(void)synchronize {
+    NSLog(@"saving to db");
     NSMutableString* statements = [NSMutableString string];
     for (NSString* st in cacheStatements) [statements appendFormat:@" %@", st];
+    [self.database executeUpdate:@"BEGIN TRANSACTION;"];
     [self.database executeStatements:statements];
+    [self.database executeUpdate:@"COMMIT TRANSACTION;"];
     [cacheStatements removeAllObjects];
+    NSLog(@"saved to db");
 }
 
 @end

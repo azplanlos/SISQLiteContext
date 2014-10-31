@@ -17,6 +17,7 @@
 
 @property (strong) FMDatabase* database;
 @property (assign) NSUInteger cacheItemSize;
+@property (strong) NSString* idField;
 
 +(SISQLiteContext*)SQLiteContext;
 

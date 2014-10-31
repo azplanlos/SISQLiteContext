@@ -18,7 +18,7 @@
 -(id)init {
     self = [super init];
     self.inDatabase = NO;
-    NSLog(@"properties: %@", [self allPropertyNames]);
+    //NSLog(@"properties: %@", [self allPropertyNames]);
     return self;
 }
 
@@ -28,7 +28,7 @@
 
 -(NSString*)insertStatement {
     NSString* retStr = [NSString stringWithFormat:@"INSERT INTO %@ (%@) VALUES (%@);", self.table, self.sqlProperties.commaSeparatedList,self.sqlValues.commaSeparatedList];
-    NSLog(@"sql %@", retStr);
+    //NSLog(@"sql %@", retStr);
     return retStr;
 }
 
@@ -41,7 +41,7 @@
         i++;
     }
     NSString* retStr = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
-    NSLog(@"sql %@", retStr);
+    //NSLog(@"sql %@", retStr);
     return retStr;
 }
 
@@ -49,13 +49,22 @@
     if ([key rangeOfString:@"sql_"].location != 0 && [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]]) {
         NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
         if ([type rangeOfString:@"NSString"].location != NSNotFound) {
-            NSLog(@"string for undefined key %@", key);
+            //NSLog(@"string for undefined key %@", key);
             return [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]];
         } else {
-            NSLog(@"number for undefined key %@", key);
-            return [NSNumber numberWithFloat:[[self valueForKey:[NSString stringWithFormat:@"sql_%@", key]] floatValue]];
+            //NSLog(@"number for undefined key %@", key);
+            return [NSNumber numberWithDouble:[[self valueForKey:[NSString stringWithFormat:@"sql_%@", key]] doubleValue]];
         }
         
+    } else if ([key rangeOfString:@"sql_"].location != 0) {
+        NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
+        if ([type rangeOfString:@"NSString"].location != NSNotFound) {
+            //NSLog(@"string for undefined key %@", key);
+            return @"";
+        } else {
+            //NSLog(@"number for undefined key %@", key);
+            return @(0);
+        }
     }
     return nil;
 }
@@ -79,8 +88,8 @@
     for (NSString* prop in self.sqlProperties) {
         id val = [self valueForKey:prop];
         if ([val isKindOfClass:[NSNumber class]]) {
-            NSLog(@"number for %@", prop);
-            val = [val stringValue];
+            //NSLog(@"number for %@", prop);
+            val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
         } else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
         [retArray addObject:val];
     }
