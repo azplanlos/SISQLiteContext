@@ -13,6 +13,11 @@
 @property (assign) BOOL inDatabase;
 @property (assign) NSInteger ID;
 @property (strong, readonly) NSString* table;
+@property (strong, nonatomic) NSString* referenceKey;
+@property (strong, nonatomic) id referenceValue;
+@property (assign, readonly) BOOL isFaulted;
+
++(id)faultedObjectWithReferenceKey:(NSString*)string andValue:(id)refValue;
 
 -(void)saveAndDestroy;
 -(NSString*)insertStatement;

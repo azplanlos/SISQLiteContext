@@ -13,17 +13,31 @@
 #import "NSArray+containsString.h"
 
 @implementation SISQLiteObject
-@synthesize inDatabase, ID;
+@synthesize inDatabase, ID, isFaulted, referenceKey, referenceValue;
 
 -(id)init {
     self = [super init];
     self.inDatabase = NO;
+    isFaulted = NO;
+    referenceKey = @"ID";
     //NSLog(@"properties: %@", [self allPropertyNames]);
     return self;
 }
 
++(id)faultedObjectWithReferenceKey:(NSString *)key andValue:(id)refValue {
+    SISQLiteObject* myObj = [[[self class] alloc] init];
+    myObj.referenceValue = refValue;
+    myObj.referenceKey = key;
+    return myObj;
+}
+
+-(void)setReferenceValue:(id)newReferenceValue {
+    referenceValue = newReferenceValue;
+    isFaulted = YES;
+}
+
 -(void)saveAndDestroy {
-    [[SISQLiteContext SQLiteContext] updateObject:self];
+    if (!isFaulted) [[SISQLiteContext SQLiteContext] updateObject:self];
 }
 
 -(NSString*)insertStatement {
@@ -48,8 +62,10 @@
 -(id)valueForUndefinedKey:(NSString *)key {
     if ([key rangeOfString:@"sql_"].location != 0 && [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]]) {
         NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
-        if ([type rangeOfString:@"NSString"].location != NSNotFound) {
+        if ([type rangeOfString:@"String"].location != NSNotFound) {
             //NSLog(@"string for undefined key %@", key);
+            return [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]];
+        } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
             return [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]];
         } else {
             //NSLog(@"number for undefined key %@", key);
@@ -91,6 +107,16 @@
             //NSLog(@"number for %@", prop);
             val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
         } else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        else if ([val isKindOfClass:[NSArray class]]) {
+            NSMutableString* val2 = [[NSMutableString alloc] init];
+            int i = 0;
+            for (SISQLiteObject* child in (NSArray*)val) {
+                if (i != 0) [val2 appendString:@","];
+                [val2 appendFormat:@"%@=%@", child.referenceKey, child.referenceValue];
+                i++;
+            }
+            val = [NSString stringWithFormat:@"'%@'", val2];
+        }
         [retArray addObject:val];
     }
     return retArray;
