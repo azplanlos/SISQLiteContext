@@ -24,4 +24,6 @@
 -(NSString*)updateStatement;
 -(NSArray*)sqlProperties;
 -(NSArray*)sqlValues;
+
+-(void)loadObjectFromStore;
 @end

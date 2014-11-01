@@ -146,4 +146,46 @@ static SISQLiteContext* _sisqlitecontext;
     NSLog(@"saved to db");
 }
 
+-(NSArray*)resultsForQuery:(NSString *)queryString withClass:(Class)objectClass {
+    NSMutableArray* retArray = [[NSMutableArray alloc] init];
+    NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ WHERE %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
+    FMResultSet* results = [self.database executeQuery:query];
+    while ([results next]) {
+        SISQLiteObject* obj = [[objectClass alloc] init];
+        NSArray* sqlProps = [obj sqlProperties];
+        for (NSString* key in sqlProps) {
+            id val;
+            NSString* type = [NSString stringWithUTF8String:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
+            if ([type rangeOfString:@"String"].location != NSNotFound) {
+                val = [results stringForColumn:key];
+            } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
+                // resolve relations with faulted objects
+                val = [[NSMutableArray alloc] init];
+                NSArray* objectVals = [[results stringForColumn:key] componentsSeparatedByString:@","];
+                for (NSString* childObjString in objectVals) {
+                    if (childObjString.length > 0 && [childObjString rangeOfString:@"/"].location != NSNotFound) {
+                        NSArray* keyVal = [childObjString componentsSeparatedByString:@"="];
+                        NSString* childRefVal = [keyVal lastObject];
+                        NSArray* objRef = [[keyVal objectAtIndex:0] componentsSeparatedByString:@"/"];
+                        NSString* childRefKey = objRef.lastObject;
+                        NSString* childObjectClass = [objRef objectAtIndex:0];
+                        SISQLiteObject* child = [NSClassFromString(childObjectClass)faultedObjectWithReferenceKey:childRefKey andValue:childRefVal];
+                        [val addObject:child];
+                    }
+                }
+            } else {
+                val = [NSNumber numberWithDouble:[results doubleForColumn:key]];
+            }
+            [obj setValue:val forKey:key];
+        }
+        [retArray addObject:obj];
+    }
+    return [NSArray arrayWithArray:retArray];
+}
+
+-(BOOL)isDatabaseReady {
+    if ([self.database goodConnection] && initialized) return YES;
+    return NO;
+}
+
 @end

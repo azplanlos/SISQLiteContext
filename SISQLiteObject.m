@@ -28,6 +28,7 @@
     SISQLiteObject* myObj = [[[self class] alloc] init];
     myObj.referenceValue = refValue;
     myObj.referenceKey = key;
+    [myObj setValue:refValue forKey:key];
     return myObj;
 }
 
@@ -112,7 +113,7 @@
             int i = 0;
             for (SISQLiteObject* child in (NSArray*)val) {
                 if (i != 0) [val2 appendString:@","];
-                [val2 appendFormat:@"%@=%@", child.referenceKey, child.referenceValue];
+                [val2 appendFormat:@"%@/%@=%@", child.className, child.referenceKey, child.referenceValue];
                 i++;
             }
             val = [NSString stringWithFormat:@"'%@'", val2];
@@ -124,6 +125,15 @@
 
 -(NSString*)table {
     return [[self className] lowercaseString];
+}
+
+-(void)loadObjectFromStore {
+    NSString* query = [NSString stringWithFormat:@"%@ = %@", self.referenceKey, self.referenceValue];
+    SISQLiteObject* tempObject = [[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:[self class]].lastObject;
+    for (NSString* key in [tempObject sqlProperties]) {
+        [self setValue:[tempObject valueForKey:key] forKey:key];
+    }
+    isFaulted = NO;
 }
 
 @end

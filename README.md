@@ -47,8 +47,15 @@ If you want to add a reference without creating the actual object, just add a fa
 
 	SISQLiteObject* myObject = [SISQLiteObject faultedObjectWithReferenceKey:@"ID" andValue:@"125"];
 	[myParentObject.mutableArrayProperty addObject:myObject];
+	
+Fetch some objects from database, child objects will be added faulted:
+
+	NSArray* myObjects = [[SISQLiteContext SQLiteContext] resultsForQuery:@"name = 'test'" withClass:[MyObjectClass class]];
+	
+Load a faulted object from database:
+
+	[myFaultedObject loadObjectFromStore];
 
 Todo
 ----
 
-- Reading not implemented yet!
