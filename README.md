@@ -29,6 +29,12 @@ Init the database and check for compatibility. Changes will be made automaticall
 	[[SISQLiteContext SQLiteContext] setIdField:@"identifier"];
     [[SISQLiteContext SQLiteContext] initDatabaseWithTableObjects:[NSArray arrayWithObjects:[objectClass1 class], [objectClass2 class], [objectClass3 class], nil]];
     
+Check if database is initialized correctly:
+
+	if ([[SISQLiteContext SQLiteContext] isDatabaseReady]) {
+		// Do something with your database
+	}
+    
 Now create your objects as normal. To save them to your database, call on your object:
 
 	-(void)saveAndDestroy;

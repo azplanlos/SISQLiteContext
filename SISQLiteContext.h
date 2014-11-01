@@ -13,11 +13,13 @@
 
 @interface SISQLiteContext : NSObject {
     NSMutableArray* cacheStatements;
+    BOOL initialized;
 }
 
 @property (strong) FMDatabase* database;
 @property (assign) NSUInteger cacheItemSize;
 @property (strong) NSString* idField;
+@property (readonly) BOOL isDatabaseReady;
 
 +(SISQLiteContext*)SQLiteContext;
 

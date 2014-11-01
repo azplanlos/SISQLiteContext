@@ -41,6 +41,7 @@ static SISQLiteContext* _sisqlitecontext;
         self.cacheItemSize = 10000;
         cacheStatements = [[NSMutableArray alloc] init];
         idField = @"ID";
+        initialized = NO;
     }
     return self;
 }
@@ -120,6 +121,7 @@ static SISQLiteContext* _sisqlitecontext;
         
         free(properties);
     }
+    initialized = YES;
 }
 
 -(void)updateObject:(SISQLiteObject *)object {
