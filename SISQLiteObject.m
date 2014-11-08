@@ -128,12 +128,27 @@
 }
 
 -(void)loadObjectFromStore {
-    NSString* query = [NSString stringWithFormat:@"%@ = %@", self.referenceKey, self.referenceValue];
+    NSString* query;
+    if ([[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", referenceKey]]] rangeOfString:@"String"].location != NSNotFound) {
+        query = [NSString stringWithFormat:@"%@ = '%@'", self.referenceKey, self.referenceValue];
+    } else {
+        query = [NSString stringWithFormat:@"%@ = %f", self.referenceKey, [self.referenceValue doubleValue]];
+    }
     SISQLiteObject* tempObject = [[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:[self class]].lastObject;
     for (NSString* key in [tempObject sqlProperties]) {
         [self setValue:[tempObject valueForKey:key] forKey:key];
     }
     isFaulted = NO;
+}
+
+-(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey {
+    NSString* query;
+    if ([[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", referenceKey]]] rangeOfString:@"String"].location != NSNotFound) {
+        query = [NSString stringWithFormat:@"* LIKE '%%%@/%@=%@%%'", NSStringFromClass(objectClass), xreferenceKey, [self valueForKey:xreferenceKey]];
+    } else {
+        query = [NSString stringWithFormat:@"* LIKE '%%%@/%@=%f%%'", NSStringFromClass(objectClass), xreferenceKey, [[self valueForKey:xreferenceKey] doubleValue]];
+    }
+    return [[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:objectClass];
 }
 
 @end

@@ -30,6 +30,6 @@
 -(void)updateObject:(SISQLiteObject*)object;
 
 -(NSArray*)resultsForQuery:(NSString*)queryString withClass:(Class) objectClass;
-
+-(NSArray*)resultsForHavingQuery:(NSString *)queryString withClass:(Class)objectClass;
 
 @end

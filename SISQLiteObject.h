@@ -26,4 +26,6 @@
 -(NSArray*)sqlValues;
 
 -(void)loadObjectFromStore;
+-(SISQLiteObject*)parentObjectWithClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey;
+
 @end

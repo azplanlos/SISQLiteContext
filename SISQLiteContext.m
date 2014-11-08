@@ -79,7 +79,7 @@ static SISQLiteContext* _sisqlitecontext;
             [self.database executeUpdate:query];
             NSLog(@"created table %@", stableName);
         } else {
-            NSString* query = [NSString stringWithFormat:@"delete from %@ where rowid not in (select  min(rowid) from %@ group by %@);", stableName, stableName, idField];
+            NSString* query = [NSString stringWithFormat:@"delete from %@ where rowid not in (select  max(rowid) from %@ group by %@);", stableName, stableName, idField];
             [self.database executeUpdate:query];
         }
         
@@ -148,10 +148,9 @@ static SISQLiteContext* _sisqlitecontext;
     NSLog(@"saved to db");
 }
 
--(NSArray*)resultsForQuery:(NSString *)queryString withClass:(Class)objectClass {
+-(NSArray*)executeQuery:(NSString*)queryString withClass:(Class)objectClass {
     NSMutableArray* retArray = [[NSMutableArray alloc] init];
-    NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ WHERE %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
-    FMResultSet* results = [self.database executeQuery:query];
+    FMResultSet* results = [self.database executeQuery:queryString];
     while ([results next]) {
         SISQLiteObject* obj = [[objectClass alloc] init];
         NSArray* sqlProps = [obj sqlProperties];
@@ -184,6 +183,18 @@ static SISQLiteContext* _sisqlitecontext;
     }
     return [NSArray arrayWithArray:retArray];
 }
+
+-(NSArray*)resultsForQuery:(NSString *)queryString withClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ WHERE %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
+    return [self executeQuery:query withClass:objectClass];
+}
+
+-(NSArray*)resultsForHavingQuery:(NSString *)queryString withClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ GROUP BY ID HAVING %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
+    NSLog(@"Query: %@", query);
+    return [self executeQuery:query withClass:objectClass];
+}
+
 
 -(BOOL)isDatabaseReady {
     if ([self.database goodConnection] && initialized) return YES;
