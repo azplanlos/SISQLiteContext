@@ -27,5 +27,5 @@
 
 -(void)loadObjectFromStore;
 -(SISQLiteObject*)parentObjectWithClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey;
-
+-(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
 @end

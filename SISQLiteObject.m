@@ -143,11 +143,22 @@
 
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey {
     NSString* query;
-    if ([[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", referenceKey]]] rangeOfString:@"String"].location != NSNotFound) {
-        query = [NSString stringWithFormat:@"* LIKE '%%%@/%@=%@%%'", NSStringFromClass(objectClass), xreferenceKey, [self valueForKey:xreferenceKey]];
-    } else {
-        query = [NSString stringWithFormat:@"* LIKE '%%%@/%@=%f%%'", NSStringFromClass(objectClass), xreferenceKey, [[self valueForKey:xreferenceKey] doubleValue]];
+    NSMutableString* columns = [NSMutableString stringWithString:@"("];
+    SISQLiteObject* obj = [[objectClass alloc] init];
+    for (NSString* propKey in [obj sqlProperties]) {
+        NSString* typeString = [NSString stringWithUTF8String:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", propKey]]];
+        if ([typeString rangeOfString:@"Array"].location != NSNotFound) {
+            if (columns.length > 1) [columns appendString:@"|| "];
+            [columns appendFormat:@"%@", propKey];
+        }
     }
+    [columns appendString:@")"];
+    if ([[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", xreferenceKey]]] rangeOfString:@"String"].location != NSNotFound) {
+        query = [NSString stringWithFormat:@"%@ LIKE '%%%@/%@=%@%%'", columns, NSStringFromClass([self class]), xreferenceKey, [self valueForKey:xreferenceKey]];
+    } else {
+        query = [NSString stringWithFormat:@"%@ LIKE '%%%@/%@=%0.0f%%'", columns, NSStringFromClass([self class]), xreferenceKey, [[self valueForKey:xreferenceKey] doubleValue]];
+    }
+    NSLog(@"fetching parents with query %@", query);
     return [[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:objectClass];
 }
 
