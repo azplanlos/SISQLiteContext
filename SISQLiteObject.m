@@ -142,7 +142,14 @@
         if ([val isKindOfClass:[NSNumber class]]) {
             //NSLog(@"number for %@", prop);
             val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
-        } else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        } else if ([val isKindOfClass:[NSString class]]) {
+            NSMutableCharacterSet *charactersToRemove = [NSMutableCharacterSet alphanumericCharacterSet];
+            [charactersToRemove formUnionWithCharacterSet:[NSCharacterSet nonBaseCharacterSet]];
+            [charactersToRemove removeCharactersInString:@"'´`;"];
+            [charactersToRemove invert];
+            val = [[val componentsSeparatedByCharactersInSet:charactersToRemove] componentsJoinedByString:@" "];
+            val = [NSString stringWithFormat:@"'%@'", val];
+        }
         else if ([val isKindOfClass:[NSArray class]]) {
             NSMutableString* val2 = [[NSMutableString alloc] init];
             int i = 0;
@@ -165,7 +172,14 @@
         if ([val isKindOfClass:[NSNumber class]]) {
             //NSLog(@"number for %@", prop);
             val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
-        } else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        } else if ([val isKindOfClass:[NSString class]]) {
+            NSMutableCharacterSet *charactersToRemove = [NSMutableCharacterSet alphanumericCharacterSet];
+            [charactersToRemove formUnionWithCharacterSet:[NSCharacterSet nonBaseCharacterSet]];
+            [charactersToRemove removeCharactersInString:@"'´`;"];
+            [charactersToRemove invert];
+            val = [[val componentsSeparatedByCharactersInSet:charactersToRemove] componentsJoinedByString:@" "];
+            val = [NSString stringWithFormat:@"'%@'", val];
+        }
         else if ([val isKindOfClass:[NSArray class]]) {
             NSMutableString* val2 = [[NSMutableString alloc] init];
             int i = 0;
