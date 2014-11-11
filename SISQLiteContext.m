@@ -68,10 +68,21 @@ static SISQLiteContext* _sisqlitecontext;
     for (id obj in tableObjects) {
         NSString* stableName = [[obj className] lowercaseString];
         NSLog(@"checking for table %@", stableName);
+        
+        SISQLiteObject* testObj = [[obj alloc] init];
+        
         FMResultSet* tableResult = [self.database executeQueryWithFormat:@"SELECT name FROM sqlite_master WHERE type='table';"];
         BOOL tableFound = NO;
+        NSMutableArray* foundRelTables = [NSMutableArray array];
+        
         while ([tableResult next]) {
             if ([[tableResult stringForColumnIndex:0] isEqualToString:stableName]) tableFound = YES;
+            for (NSString* relProp in testObj.toManyRelationshipProperties) {
+                NSString* tableName = [NSString stringWithFormat:@"%@-%@", stableName, relProp];
+                if ([[tableResult stringForColumnIndex:0] isEqualToString:tableName]) {
+                    [foundRelTables addObject:relProp];
+                }
+            }
         }
         
         if (!tableFound) {
@@ -83,6 +94,21 @@ static SISQLiteContext* _sisqlitecontext;
             [self.database executeUpdate:query];
         }
         
+        // check for relation table
+        
+        for (NSString* relProp in testObj.toManyRelationshipProperties) {
+            NSString* tableName = [NSString stringWithFormat:@"%@-%@", stableName, relProp];
+            if ([foundRelTables containsString:tableName]) {
+                
+            } else {
+                NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT, 'parentRef' TEXT, 'parentRefKey' TEXT, 'childRef' TEXT, 'childRefKey' TEXT, 'childType' TEXT);", tableName];
+                [self.database executeUpdate:query];
+                NSLog(@"created table %@", tableName);
+            }
+        }
+        
+        // check for table contents
+        
         NSString* query = [NSString stringWithFormat:@"PRAGMA table_info('%@');", stableName];
         FMResultSet* myResult = [self.database executeQuery:query];
         NSMutableArray* tablePropNames = [[NSMutableArray alloc] init];
@@ -91,35 +117,23 @@ static SISQLiteContext* _sisqlitecontext;
             [tablePropNames addObject:[myResult stringForColumn:@"name"]];
         }
         
-        unsigned count;
-        objc_property_t *properties = class_copyPropertyList(obj, &count);
-        unsigned i;
-        for (i = 0; i < count; i++)
-        {
-            objc_property_t property = properties[i];
-            NSString *name = [NSString stringWithUTF8String:property_getName(property)];
-            if ([name rangeOfString:@"sql_"].location == 0) {
-                name = [name substringFromIndex:4];
-                //NSLog(@"checking for property %@", name);
-                if (![tablePropNames containsString:name]) {
-                    NSString* type = [NSString stringWithCString:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@",name]] encoding:NSUTF8StringEncoding];
-                    NSLog(@"creating property %@ of type %@", name, type);
-                    if ([type rangeOfString:@"Ts"].location != NSNotFound || [type rangeOfString:@"Tq"].location != NSNotFound || [type rangeOfString:@"Tc"].location != NSNotFound || [type rangeOfString:@"Ti"].location != NSNotFound || [type rangeOfString:@"Tl"].location != NSNotFound || [type rangeOfString:@"TI"].location != NSNotFound) {
-                        type = @"INTEGER";
-                    } else if ([type rangeOfString:@"NSString"].location != NSNotFound) {
-                        type = @"TEXT";
-                    } else if ([type rangeOfString:@"Tf"].location != NSNotFound || [type rangeOfString:@"Td"].location != NSNotFound) {
-                        type = @"REAL";
-                    } else {
-                        type = @"NONE";
-                    }
-                    NSString* updateQuery = [NSString stringWithFormat:@"ALTER TABLE %@ ADD COLUMN %@ %@;", stableName, name, type];
-                    [self.database executeUpdate:updateQuery];
+        for (NSString* name in testObj.fullSqlProperties) {
+            if (![tablePropNames containsString:name]) {
+                NSString* type = [NSString stringWithCString:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@",name]] encoding:NSUTF8StringEncoding];
+                NSLog(@"creating property %@ of type %@", name, type);
+                if ([type rangeOfString:@"Ts"].location != NSNotFound || [type rangeOfString:@"Tq"].location != NSNotFound || [type rangeOfString:@"Tc"].location != NSNotFound || [type rangeOfString:@"Ti"].location != NSNotFound || [type rangeOfString:@"Tl"].location != NSNotFound || [type rangeOfString:@"TI"].location != NSNotFound) {
+                    type = @"INTEGER";
+                } else if ([type rangeOfString:@"NSString"].location != NSNotFound) {
+                    type = @"TEXT";
+                } else if ([type rangeOfString:@"Tf"].location != NSNotFound || [type rangeOfString:@"Td"].location != NSNotFound) {
+                    type = @"REAL";
+                } else {
+                    type = @"NONE";
                 }
+                NSString* updateQuery = [NSString stringWithFormat:@"ALTER TABLE %@ ADD COLUMN %@ %@;", stableName, name, type];
+                [self.database executeUpdate:updateQuery];
             }
         }
-        
-        free(properties);
     }
     initialized = YES;
 }
@@ -179,6 +193,7 @@ static SISQLiteContext* _sisqlitecontext;
             }
             [obj setValue:val forKey:key];
         }
+        obj.inDatabase = YES;
         [retArray addObject:obj];
     }
     return [NSArray arrayWithArray:retArray];

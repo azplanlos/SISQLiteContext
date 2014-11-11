@@ -24,8 +24,10 @@
 -(NSString*)updateStatement;
 -(NSArray*)sqlProperties;
 -(NSArray*)sqlValues;
+-(NSArray*)fullSqlProperties;
+-(NSArray*)fullSqlValues;
+-(NSArray*)toManyRelationshipProperties;
 
 -(void)loadObjectFromStore;
--(SISQLiteObject*)parentObjectWithClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey;
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
 @end

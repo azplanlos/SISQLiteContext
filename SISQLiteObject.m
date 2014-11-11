@@ -34,6 +34,7 @@
 
 -(void)setReferenceValue:(id)newReferenceValue {
     referenceValue = newReferenceValue;
+    [self setValue:newReferenceValue forKey:self.referenceKey];
     isFaulted = YES;
 }
 
@@ -42,22 +43,39 @@
 }
 
 -(NSString*)insertStatement {
-    NSString* retStr = [NSString stringWithFormat:@"INSERT INTO %@ (%@) VALUES (%@);", self.table, self.sqlProperties.commaSeparatedList,self.sqlValues.commaSeparatedList];
-    //NSLog(@"sql %@", retStr);
-    return retStr;
+    if (!self.isFaulted) {
+        NSString* retStr = [NSString stringWithFormat:@"INSERT INTO %@ (%@) VALUES (%@);", self.table, self.fullSqlProperties.commaSeparatedList,self.fullSqlValues.commaSeparatedList];
+        for (NSString* rel in self.toManyRelationshipProperties) {
+            NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
+            for (SISQLiteObject* child in [self valueForKey:rel]) {
+                retStr = [NSString stringWithFormat:@"%@ INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES ('%@', '%@', '%@', '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+            }
+        }
+        return retStr;
+    }
+    return @"";
 }
 
 -(NSString*)updateStatement {
-    NSMutableString* setString = [[NSMutableString alloc] init];
-    int i = 0;
-    for (NSString* prop in self.sqlProperties) {
-        if (i != 0) [setString appendString:@","];
-        [setString appendFormat:@"%@=%@", prop, [[self sqlValues] objectAtIndex:[[self sqlProperties]indexOfString:prop]]];
-        i++;
+    if (!self.isFaulted) {
+        NSMutableString* setString = [[NSMutableString alloc] init];
+        int i = 0;
+        for (NSString* prop in self.fullSqlProperties) {
+            if (i != 0) [setString appendString:@","];
+            [setString appendFormat:@"%@=%@", prop, [[self sqlValues] objectAtIndex:[[self sqlProperties]indexOfString:prop]]];
+            i++;
+        }
+        NSString* retStr = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
+        for (NSString* rel in self.toManyRelationshipProperties) {
+            NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
+            retStr = [NSString stringWithFormat:@"%@ DELETE FROM %@ WHERE parentRef = '%@' AND parentRefKey = '%@';", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey];
+            for (SISQLiteObject* child in [self valueForKey:rel]) {
+                retStr = [NSString stringWithFormat:@"%@ INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES ('%@', '%@', '%@', '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+            }
+        }
+        return retStr;
     }
-    NSString* retStr = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
-    //NSLog(@"sql %@", retStr);
-    return retStr;
+    return @"";
 }
 
 -(id)valueForUndefinedKey:(NSString *)key {
@@ -74,13 +92,16 @@
         }
         
     } else if ([key rangeOfString:@"sql_"].location != 0) {
-        NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
-        if ([type rangeOfString:@"NSString"].location != NSNotFound) {
-            //NSLog(@"string for undefined key %@", key);
-            return @"";
-        } else {
-            //NSLog(@"number for undefined key %@", key);
-            return @(0);
+        const char *typeChar = [self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]];
+        if (typeChar && strlen(typeChar) > 0) {
+            NSString* type = [NSString stringWithUTF8String:typeChar];
+            if ([type rangeOfString:@"NSString"].location != NSNotFound) {
+                //NSLog(@"string for undefined key %@", key);
+                return @"";
+            } else {
+                //NSLog(@"number for undefined key %@", key);
+                return @(0);
+            }
         }
     }
     return nil;
@@ -93,7 +114,21 @@
 -(NSArray*)sqlProperties {
     NSMutableArray* retArray = [NSMutableArray array];
     for (NSString* prop in self.allPropertyNames) {
-        if ([prop rangeOfString:@"sql_"].location == 0) {
+        if ([prop rangeOfString:@"sql_"].location == 0 && [[NSString stringWithUTF8String:[self typeOfPropertyNamed:prop]] rangeOfString:@"Array"].location == NSNotFound) {
+            [retArray addObject:[prop substringFromIndex:4]];
+        }
+    }
+    return retArray;
+}
+
+-(NSArray*)fullSqlProperties {
+    return [self.sqlProperties arrayByAddingObjectsFromArray:self.toManyRelationshipProperties];
+}
+
+-(NSArray*)toManyRelationshipProperties {
+    NSMutableArray* retArray = [NSMutableArray array];
+    for (NSString* prop in self.allPropertyNames) {
+        if ([prop rangeOfString:@"sql_"].location == 0 && [[NSString stringWithUTF8String:[self typeOfPropertyNamed:prop]] rangeOfString:@"Array"].location != NSNotFound) {
             [retArray addObject:[prop substringFromIndex:4]];
         }
     }
@@ -103,6 +138,29 @@
 -(NSArray*)sqlValues {
     NSMutableArray* retArray = [NSMutableArray array];
     for (NSString* prop in self.sqlProperties) {
+        id val = [self valueForKey:prop];
+        if ([val isKindOfClass:[NSNumber class]]) {
+            //NSLog(@"number for %@", prop);
+            val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
+        } else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        else if ([val isKindOfClass:[NSArray class]]) {
+            NSMutableString* val2 = [[NSMutableString alloc] init];
+            int i = 0;
+            for (SISQLiteObject* child in (NSArray*)val) {
+                if (i != 0) [val2 appendString:@","];
+                [val2 appendFormat:@"%@/%@=%@", child.className, child.referenceKey, child.referenceValue];
+                i++;
+            }
+            val = [NSString stringWithFormat:@"'%@'", val2];
+        }
+        [retArray addObject:val];
+    }
+    return retArray;
+}
+
+-(NSArray*)fullSqlValues {
+    NSMutableArray* retArray = [NSMutableArray array];
+    for (NSString* prop in self.fullSqlProperties) {
         id val = [self valueForKey:prop];
         if ([val isKindOfClass:[NSNumber class]]) {
             //NSLog(@"number for %@", prop);
@@ -139,27 +197,17 @@
         [self setValue:[tempObject valueForKey:key] forKey:key];
     }
     isFaulted = NO;
+    inDatabase = YES;
 }
 
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey {
-    NSString* query;
-    NSMutableString* columns = [NSMutableString stringWithString:@"("];
-    SISQLiteObject* obj = [[objectClass alloc] init];
-    for (NSString* propKey in [obj sqlProperties]) {
-        NSString* typeString = [NSString stringWithUTF8String:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", propKey]]];
-        if ([typeString rangeOfString:@"Array"].location != NSNotFound) {
-            if (columns.length > 1) [columns appendString:@"|| "];
-            [columns appendFormat:@"%@", propKey];
-        }
+    SISQLiteObject* testObj = [[objectClass alloc] init];
+    NSMutableArray* objs = [NSMutableArray array];
+    for (NSString* rels in testObj.toManyRelationshipProperties) {
+        NSString* query = [NSString stringWithFormat:@"SELECT * FROM '%@-%@' WHERE childRef = '%@' AND childRefKey = '%@';", testObj.table, rels, [self valueForKey:xreferenceKey], xreferenceKey];
+        [objs addObjectsFromArray:[[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:objectClass]];
     }
-    [columns appendString:@")"];
-    if ([[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", xreferenceKey]]] rangeOfString:@"String"].location != NSNotFound) {
-        query = [NSString stringWithFormat:@"%@ LIKE '%%%@/%@=%@%%'", columns, NSStringFromClass([self class]), xreferenceKey, [self valueForKey:xreferenceKey]];
-    } else {
-        query = [NSString stringWithFormat:@"%@ LIKE '%%%@/%@=%0.0f%%'", columns, NSStringFromClass([self class]), xreferenceKey, [[self valueForKey:xreferenceKey] doubleValue]];
-    }
-    NSLog(@"fetching parents with query %@", query);
-    return [[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:objectClass];
+    return objs;
 }
 
 @end
