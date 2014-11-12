@@ -18,6 +18,7 @@
 @property (assign, readonly) BOOL isFaulted;
 
 +(id)faultedObjectWithReferenceKey:(NSString*)string andValue:(id)refValue;
+-(id)initFaultedWithReferenceKey:(NSString*)string andValue:(id)refValue;
 
 -(void)saveAndDestroy;
 -(NSString*)insertStatement;

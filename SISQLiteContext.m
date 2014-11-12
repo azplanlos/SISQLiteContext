@@ -210,6 +210,44 @@ static SISQLiteContext* _sisqlitecontext;
     return [self executeQuery:query withClass:objectClass];
 }
 
+-(NSArray*)faultedResultsForStatement:(NSString*)queryString withClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey fromTableColumn:(NSString*)column {
+    NSMutableArray* retArray = [[NSMutableArray alloc] init];
+    FMResultSet* results = [self.database executeQuery:queryString];
+    while ([results next]) {
+        SISQLiteObject* obj = [[objectClass alloc] initFaultedWithReferenceKey:referenceKey andValue:[results stringForColumn:column]];
+        [retArray addObject:obj];
+    }
+    return retArray;
+}
+
+-(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString *)key andReferenceKey:(NSString *)referenceKey withValues:(NSString *)values, ... {
+    id eachObject;
+    va_list argumentList;
+    NSMutableArray* valuesArray = [NSMutableArray array];
+    if (values) {
+        va_start(argumentList, values);
+        while ((eachObject = va_arg(argumentList, id))) {
+            [valuesArray addObject:eachObject];
+        }
+        va_end(argumentList);
+    }
+    return [self faultedObjectsForObject:objectClass withRelationKey:key andReferenceKey:referenceKey withArrayValues:valuesArray];
+}
+
+-(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString *)key andReferenceKey:(NSString *)referenceKey withArrayValues:(NSArray *)values {
+    NSMutableString* valueString = [NSMutableString string];
+    int i = 0;
+    for (id value in values) {
+        if (i != 0) [valueString appendString:@","];
+        if ([value isKindOfClass:[NSString class]]) [valueString appendFormat:@"'%@'",value];
+        else if ([value isKindOfClass:[NSNumber class]]) [valueString appendFormat:@"'%@'",[value stringValue]];
+        else [valueString appendFormat:@"'%@'",[value description]];
+        i++;
+    }
+    NSString* query = [NSString stringWithFormat:@"SELECT * FROM '%@-%@' WHERE childRefKey = '%@' AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
+    NSLog(@"query %@", query);
+    return [self faultedResultsForStatement:query withClass:objectClass andReferenceKey:referenceKey fromTableColumn:@"childRef"];
+}
 
 -(BOOL)isDatabaseReady {
     if ([self.database goodConnection] && initialized) return YES;

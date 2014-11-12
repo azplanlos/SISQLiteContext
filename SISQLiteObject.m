@@ -25,11 +25,16 @@
 }
 
 +(id)faultedObjectWithReferenceKey:(NSString *)key andValue:(id)refValue {
-    SISQLiteObject* myObj = [[[self class] alloc] init];
-    myObj.referenceValue = refValue;
-    myObj.referenceKey = key;
-    [myObj setValue:refValue forKey:key];
+    SISQLiteObject* myObj = [[[self class] alloc] initFaultedWithReferenceKey:key andValue:refValue];
     return myObj;
+}
+
+-(id)initFaultedWithReferenceKey:(NSString *)key andValue:(id)refValue {
+    self = [self init];
+    self.referenceKey = key;
+    self.referenceValue = refValue;
+    //[self setValue:refValue forKey:[NSString stringWithFormat:@"sql_%@",key]];
+    return self;
 }
 
 -(void)setReferenceValue:(id)newReferenceValue {
@@ -108,6 +113,11 @@
 }
 
 -(void)setValue:(id)value forUndefinedKey:(NSString *)key {
+    if ([value isKindOfClass:[NSString class]] && [[NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]] rangeOfString:@"String"].location == NSNotFound) {
+        //NSLog(@"type convert %@ to Number (%@ -> %f)", key, value, [value doubleValue]);
+        value = [NSNumber numberWithDouble:[value doubleValue]];
+        
+    }
     [self setValue:value forKey:[NSString stringWithFormat:@"sql_%@", key]];
 }
 
@@ -219,7 +229,7 @@
     NSMutableArray* objs = [NSMutableArray array];
     for (NSString* rels in testObj.toManyRelationshipProperties) {
         NSString* query = [NSString stringWithFormat:@"SELECT * FROM '%@-%@' WHERE childRef = '%@' AND childRefKey = '%@';", testObj.table, rels, [self valueForKey:xreferenceKey], xreferenceKey];
-        [objs addObjectsFromArray:[[SISQLiteContext SQLiteContext] resultsForQuery:query withClass:objectClass]];
+        [objs addObjectsFromArray:[[SISQLiteContext SQLiteContext] faultedResultsForStatement:query withClass:objectClass andReferenceKey:xreferenceKey fromTableColumn:@"parentRef"]];
     }
     return objs;
 }
