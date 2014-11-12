@@ -10,5 +10,5 @@
 
 @interface NSArray (ArrayForKeypath)
 -(NSArray*)arrayForValuesWithKey:(NSString*)key;
-
+-(NSArray*)stringArrayForValuesWithKey:(NSString*)key;
 @end

@@ -18,4 +18,18 @@
     return [NSArray arrayWithArray:keyPathArray];
 }
 
+-(NSArray*)stringArrayForValuesWithKey:(NSString *)key {
+    NSMutableArray* keyPathArray = [NSMutableArray array];
+    for (id elem in self) {
+        if ([elem valueForKey:key]) {
+            id val = [elem valueForKey:key];
+            if ([val isKindOfClass:[NSNumber class]]) {
+                val = [NSString stringWithFormat:@"%li", [val integerValue]];
+            }
+            [keyPathArray addObject:val];
+        }
+    }
+    return [NSArray arrayWithArray:keyPathArray];
+}
+
 @end

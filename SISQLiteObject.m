@@ -234,4 +234,22 @@
     return objs;
 }
 
+-(void)mapFaultedChildsWithKey:(NSString *)key withObjects:(NSArray *)liveObjects {
+    NSMutableArray* childs = [self valueForKey:key];
+    NSString* childRefKey = [childs.lastObject referenceKey];
+    NSArray* ids = [liveObjects stringArrayForValuesWithKey:childRefKey];
+    for (NSInteger i = 0; i < childs.count; i++) {
+        SISQLiteObject* child = [childs objectAtIndex:i];
+        id childVal = [child valueForKey:childRefKey];
+        if ([childVal isKindOfClass:[NSNumber class]]) childVal = [NSString stringWithFormat:@"%li", [childVal integerValue]];
+        NSInteger indexOfLive = [ids indexOfString:childVal];
+        if (indexOfLive != NSNotFound) {
+            [childs replaceObjectAtIndex:i withObject:[liveObjects objectAtIndex:indexOfLive]];
+        } else {
+            //NSLog(@"child not found with %@='%@'", childRefKey, childVal);
+            //[child loadObjectFromStore];
+        }
+    }
+}
+
 @end

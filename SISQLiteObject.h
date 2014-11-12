@@ -31,4 +31,5 @@
 
 -(void)loadObjectFromStore;
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
+-(void)mapFaultedChildsWithKey:(NSString*)key withObjects:(NSArray*)liveObjects;
 @end
