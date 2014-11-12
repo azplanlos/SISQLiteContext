@@ -11,6 +11,7 @@
 #import <objc/runtime.h>
 #import "NSArray+containsString.h"
 #import "AQProperties.h"
+#import "NSArray+listOfKeys.h"
 
 @implementation SISQLiteContext
 
@@ -164,6 +165,7 @@ static SISQLiteContext* _sisqlitecontext;
 
 -(NSArray*)executeQuery:(NSString*)queryString withClass:(Class)objectClass {
     NSMutableArray* retArray = [[NSMutableArray alloc] init];
+    NSLog(@"dq query: %@", queryString);
     FMResultSet* results = [self.database executeQuery:queryString];
     while ([results next]) {
         SISQLiteObject* obj = [[objectClass alloc] init];
@@ -206,7 +208,6 @@ static SISQLiteContext* _sisqlitecontext;
 
 -(NSArray*)resultsForHavingQuery:(NSString *)queryString withClass:(Class)objectClass {
     NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ GROUP BY ID HAVING %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
-    NSLog(@"Query: %@", query);
     return [self executeQuery:query withClass:objectClass];
 }
 
@@ -244,9 +245,18 @@ static SISQLiteContext* _sisqlitecontext;
         else [valueString appendFormat:@"'%@'",[value description]];
         i++;
     }
-    NSString* query = [NSString stringWithFormat:@"SELECT * FROM '%@-%@' WHERE childRefKey = '%@' AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
-    NSLog(@"query %@", query);
-    return [self faultedResultsForStatement:query withClass:objectClass andReferenceKey:referenceKey fromTableColumn:@"childRef"];
+    NSString* query = [NSString stringWithFormat:@"SELECT DISTINCT parentRef FROM '%@-%@' WHERE childRefKey = '%@' AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
+    //NSLog(@"query %@", query);
+    return [self faultedResultsForStatement:query withClass:objectClass andReferenceKey:referenceKey fromTableColumn:@"parentRef"];
+}
+
+-(NSArray*)liveObjectsFromArrayOfFaultedObjects:(NSArray *)faultedObjects {
+    if (faultedObjects.count > 0) {
+        NSString* query = [NSString stringWithFormat:@"%@ IN (%@)", [faultedObjects.lastObject referenceKey], [[faultedObjects arrayForValuesWithKey:[faultedObjects.lastObject referenceKey]] commaSeparatedList]];
+        NSArray* retObjs = [self resultsForQuery:query withClass:[faultedObjects.lastObject class]];
+        return retObjs;
+    }
+    return faultedObjects;
 }
 
 -(BOOL)isDatabaseReady {

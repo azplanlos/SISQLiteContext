@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "FMDB.h"
+#import "NSArray+ArrayForKeypath.h"
 
 @class SISQLiteObject;
 
@@ -34,4 +35,5 @@
 -(NSArray*)faultedResultsForStatement:(NSString*)queryString withClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey fromTableColumn:(NSString*)column;
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString*)key andReferenceKey:(NSString*)referenceKey withValues:(NSString*)values,...;
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString*)key andReferenceKey:(NSString*)referenceKey withArrayValues:(NSArray*)values;
+-(NSArray*)liveObjectsFromArrayOfFaultedObjects:(NSArray*)faultedObjects;
 @end

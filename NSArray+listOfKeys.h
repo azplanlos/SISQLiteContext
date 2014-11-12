@@ -11,5 +11,5 @@
 @interface NSArray (listOfKeys)
 
 -(NSString*)commaSeparatedList;
-
+-(NSString*)commaSeparatedListWithQuoteString:(NSString*)quote;
 @end

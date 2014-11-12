@@ -10,17 +10,21 @@
 
 @implementation NSArray (listOfKeys)
 
--(NSString*)commaSeparatedList {
+-(NSString*)commaSeparatedListWithQuoteString:(NSString *)quote {
     NSMutableString* retStr = [NSMutableString string];
     int i = 0;
     for (NSString* prop in self) {
         if (i != 0) {
             [retStr appendString:@","];
         }
-        [retStr appendString:prop];
+        [retStr appendFormat:@"%@%@%@", quote, prop, quote];
         i++;
     }
     return retStr;
+}
+
+-(NSString*)commaSeparatedList {
+    return [self commaSeparatedListWithQuoteString:@""];
 }
 
 @end
