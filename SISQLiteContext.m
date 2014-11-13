@@ -48,19 +48,25 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(void)loadDatabaseFromURL:(NSURL*)fileUrl; {
-    if (self.database) {
-        [self.database close];
-        self.database = nil;
+    if (self.dbQueue) {
+        [self.dbQueue inDatabase:^(FMDatabase *db) {
+            [db close];
+        }];
+        self.dbQueue = nil;
     }
     NSString* dbFilePath = fileUrl.path;
-    self.database = [FMDatabase databaseWithPath:dbFilePath];
+    self.dbQueue = [FMDatabaseQueue databaseQueueWithPath:dbFilePath];
     BOOL newDB = NO;
     if (![[NSFileManager defaultManager] fileExistsAtPath:dbFilePath]) {
         newDB = YES;
     }
-    [self.database open];
+    [self.dbQueue inDatabase:^(FMDatabase *db) {
+        [db open];
+    }];
     if (newDB) {
-        [self.database executeStatements:[NSString stringWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"init_database" withExtension:@"sql"] encoding:NSUTF8StringEncoding error:nil]];
+        [self.dbQueue inDatabase:^(FMDatabase *db) {
+            [db executeStatements:[NSString stringWithContentsOfURL:[[NSBundle mainBundle] URLForResource:@"init_database" withExtension:@"sql"] encoding:NSUTF8StringEncoding error:nil]];
+        }];
     }
 }
 
@@ -72,27 +78,32 @@ static SISQLiteContext* _sisqlitecontext;
         
         SISQLiteObject* testObj = [[obj alloc] init];
         
-        FMResultSet* tableResult = [self.database executeQueryWithFormat:@"SELECT name FROM sqlite_master WHERE type='table';"];
-        BOOL tableFound = NO;
-        NSMutableArray* foundRelTables = [NSMutableArray array];
-        
-        while ([tableResult next]) {
-            if ([[tableResult stringForColumnIndex:0] isEqualToString:stableName]) tableFound = YES;
-            for (NSString* relProp in testObj.toManyRelationshipProperties) {
-                NSString* tableName = [NSString stringWithFormat:@"%@-%@", stableName, relProp];
-                if ([[tableResult stringForColumnIndex:0] isEqualToString:tableName]) {
-                    [foundRelTables addObject:relProp];
+        __block FMResultSet* tableResult;
+        __block BOOL tableFound = NO;
+        __block NSMutableArray* foundRelTables = [NSMutableArray array];
+        [self.dbQueue inDatabase:^(FMDatabase *db) {
+            tableResult = [db executeQueryWithFormat:@"SELECT name FROM sqlite_master WHERE type='table';"];
+            while ([tableResult next]) {
+                if ([[tableResult stringForColumnIndex:0] isEqualToString:stableName]) tableFound = YES;
+                for (NSString* relProp in testObj.toManyRelationshipProperties) {
+                    NSString* tableName = [NSString stringWithFormat:@"%@-%@", stableName, relProp];
+                    if ([[tableResult stringForColumnIndex:0] isEqualToString:tableName]) {
+                        [foundRelTables addObject:relProp];
+                    }
                 }
             }
-        }
-        
+
+        }]; 
+                
         if (!tableFound) {
             NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT);", stableName];
-            [self.database executeUpdate:query];
+            [self.dbQueue inDatabase:^(FMDatabase *db) {
+                [db executeUpdate:query];
+            }];
             NSLog(@"created table %@", stableName);
         } else {
-            NSString* query = [NSString stringWithFormat:@"delete from %@ where rowid not in (select  max(rowid) from %@ group by %@);", stableName, stableName, idField];
-            [self.database executeUpdate:query];
+            //NSString* query = [NSString stringWithFormat:@"delete from %@ where rowid not in (select  max(rowid) from %@ group by %@);", stableName, stableName, idField];
+            //[self.database executeUpdate:query];
         }
         
         // check for relation table
@@ -103,21 +114,24 @@ static SISQLiteContext* _sisqlitecontext;
                 
             } else {
                 NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT, 'parentRef' TEXT, 'parentRefKey' TEXT, 'childRef' TEXT, 'childRefKey' TEXT, 'childType' TEXT);", tableName];
-                [self.database executeUpdate:query];
+                [self.dbQueue inDatabase:^(FMDatabase *db) {
+                    [db executeUpdate:query];
+                }];
                 NSLog(@"created table %@", tableName);
             }
         }
         
         // check for table contents
-        
-        NSString* query = [NSString stringWithFormat:@"PRAGMA table_info('%@');", stableName];
-        FMResultSet* myResult = [self.database executeQuery:query];
-        NSMutableArray* tablePropNames = [[NSMutableArray alloc] init];
-        while ([myResult next]) {
-            NSLog(@"row %@", [myResult stringForColumn:@"name"]);
-            [tablePropNames addObject:[myResult stringForColumn:@"name"]];
-        }
-        
+        __block NSMutableArray* tablePropNames = [[NSMutableArray alloc] init];
+        [self.dbQueue inDatabase:^(FMDatabase *db) {
+            NSString* query = [NSString stringWithFormat:@"PRAGMA table_info('%@');", stableName];
+            FMResultSet* myResult = [db executeQuery:query];
+            while ([myResult next]) {
+                NSLog(@"row %@", [myResult stringForColumn:@"name"]);
+                [tablePropNames addObject:[myResult stringForColumn:@"name"]];
+            }
+        }];
+                
         for (NSString* name in testObj.fullSqlProperties) {
             if (![tablePropNames containsString:name]) {
                 NSString* type = [NSString stringWithCString:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@",name]] encoding:NSUTF8StringEncoding];
@@ -132,7 +146,9 @@ static SISQLiteContext* _sisqlitecontext;
                     type = @"NONE";
                 }
                 NSString* updateQuery = [NSString stringWithFormat:@"ALTER TABLE %@ ADD COLUMN %@ %@;", stableName, name, type];
-                [self.database executeUpdate:updateQuery];
+                [self.dbQueue inDatabase:^(FMDatabase *db) {
+                    [db executeUpdate:updateQuery];
+                }];
             }
         }
     }
@@ -156,48 +172,50 @@ static SISQLiteContext* _sisqlitecontext;
     NSLog(@"saving to db");
     NSMutableString* statements = [NSMutableString string];
     for (NSString* st in cacheStatements) [statements appendFormat:@" %@", st];
-    [self.database executeUpdate:@"BEGIN TRANSACTION;"];
-    [self.database executeStatements:statements];
-    [self.database executeUpdate:@"COMMIT TRANSACTION;"];
+    [self.dbQueue inTransaction:^(FMDatabase *db, BOOL *rollback) {
+        [db executeStatements:statements];
+    }];
     [cacheStatements removeAllObjects];
     NSLog(@"saved to db");
 }
 
 -(NSArray*)executeQuery:(NSString*)queryString withClass:(Class)objectClass {
-    NSMutableArray* retArray = [[NSMutableArray alloc] init];
-    NSLog(@"dq query: %@", queryString);
-    FMResultSet* results = [self.database executeQuery:queryString];
-    while ([results next]) {
-        SISQLiteObject* obj = [[objectClass alloc] init];
-        NSArray* sqlProps = [obj sqlProperties];
-        for (NSString* key in sqlProps) {
-            id val;
-            NSString* type = [NSString stringWithUTF8String:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
-            if ([type rangeOfString:@"String"].location != NSNotFound) {
-                val = [results stringForColumn:key];
-            } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
-                // resolve relations with faulted objects
-                val = [[NSMutableArray alloc] init];
-                NSArray* objectVals = [[results stringForColumn:key] componentsSeparatedByString:@","];
-                for (NSString* childObjString in objectVals) {
-                    if (childObjString.length > 0 && [childObjString rangeOfString:@"/"].location != NSNotFound) {
-                        NSArray* keyVal = [childObjString componentsSeparatedByString:@"="];
-                        NSString* childRefVal = [keyVal lastObject];
-                        NSArray* objRef = [[keyVal objectAtIndex:0] componentsSeparatedByString:@"/"];
-                        NSString* childRefKey = objRef.lastObject;
-                        NSString* childObjectClass = [objRef objectAtIndex:0];
-                        SISQLiteObject* child = [NSClassFromString(childObjectClass)faultedObjectWithReferenceKey:childRefKey andValue:childRefVal];
-                        [val addObject:child];
+    __block NSMutableArray* retArray = [NSMutableArray array];
+    //NSLog(@"db query: %@", queryString);
+    [self.dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* results = [db executeQuery:queryString];
+        while ([results next]) {
+            SISQLiteObject* obj = [[objectClass alloc] init];
+            NSArray* sqlProps = [obj fullSqlProperties];
+            for (NSString* key in sqlProps) {
+                id val;
+                NSString* type = [NSString stringWithUTF8String:[obj typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
+                if ([type rangeOfString:@"String"].location != NSNotFound) {
+                    val = [results stringForColumn:key];
+                } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
+                    // resolve relations with faulted objects
+                    val = [[NSMutableArray alloc] init];
+                    NSArray* objectVals = [[results stringForColumn:key] componentsSeparatedByString:@","];
+                    for (NSString* childObjString in objectVals) {
+                        if (childObjString.length > 0 && [childObjString rangeOfString:@"/"].location != NSNotFound) {
+                            NSArray* keyVal = [childObjString componentsSeparatedByString:@"="];
+                            NSString* childRefVal = [keyVal lastObject];
+                            NSArray* objRef = [[keyVal objectAtIndex:0] componentsSeparatedByString:@"/"];
+                            NSString* childRefKey = objRef.lastObject;
+                            NSString* childObjectClass = [objRef objectAtIndex:0];
+                            SISQLiteObject* child = [NSClassFromString(childObjectClass)faultedObjectWithReferenceKey:childRefKey andValue:childRefVal];
+                            [val addObject:child];
+                        }
                     }
+                } else {
+                    val = [NSNumber numberWithDouble:[results doubleForColumn:key]];
                 }
-            } else {
-                val = [NSNumber numberWithDouble:[results doubleForColumn:key]];
+                [obj setValue:val forKey:key];
             }
-            [obj setValue:val forKey:key];
+            obj.inDatabase = YES;
+            [retArray addObject:obj];
         }
-        obj.inDatabase = YES;
-        [retArray addObject:obj];
-    }
+    }];
     return [NSArray arrayWithArray:retArray];
 }
 
@@ -212,12 +230,14 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(NSArray*)faultedResultsForStatement:(NSString*)queryString withClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey fromTableColumn:(NSString*)column {
-    NSMutableArray* retArray = [[NSMutableArray alloc] init];
-    FMResultSet* results = [self.database executeQuery:queryString];
-    while ([results next]) {
-        SISQLiteObject* obj = [[objectClass alloc] initFaultedWithReferenceKey:referenceKey andValue:[results stringForColumn:column]];
-        [retArray addObject:obj];
-    }
+    __block NSMutableArray* retArray = [[NSMutableArray alloc] init];
+    [self.dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* results = [db executeQuery:queryString];
+        while ([results next]) {
+            SISQLiteObject* obj = [[objectClass alloc] initFaultedWithReferenceKey:referenceKey andValue:[results stringForColumn:column]];
+            [retArray addObject:obj];
+        }
+    }];
     return retArray;
 }
 
@@ -260,7 +280,11 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(BOOL)isDatabaseReady {
-    if ([self.database goodConnection] && initialized) return YES;
+    __block BOOL goodConnection = NO;
+    [self.dbQueue inDatabase:^(FMDatabase *db) {
+        goodConnection = db.goodConnection;
+    }];
+    if (goodConnection && initialized) return YES;
     return NO;
 }
 

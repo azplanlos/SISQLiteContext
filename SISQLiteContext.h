@@ -17,7 +17,7 @@
     BOOL initialized;
 }
 
-@property (strong) FMDatabase* database;
+@property (strong) FMDatabaseQueue* dbQueue;
 @property (assign) NSUInteger cacheItemSize;
 @property (strong) NSString* idField;
 @property (readonly) BOOL isDatabaseReady;
