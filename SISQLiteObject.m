@@ -181,7 +181,10 @@
         id val = [self valueForKey:prop];
         if ([val isKindOfClass:[NSNumber class]]) {
             //NSLog(@"number for %@", prop);
-            val = [NSString stringWithFormat:@"%27.8f", [val doubleValue]];
+            if ([val isEqualToNumber:[NSNumber numberWithLongLong:188238674]]) {
+                NSLog(@"number for prop %@ = %.8f (%lli)", prop, [val doubleValue], [val longLongValue]);
+            }
+            val = [NSString stringWithFormat:@"%.8f", [val doubleValue]];
         } else if ([val isKindOfClass:[NSString class]]) {
             NSMutableCharacterSet *charactersToRemove = [NSMutableCharacterSet alphanumericCharacterSet];
             [charactersToRemove formUnionWithCharacterSet:[NSCharacterSet nonBaseCharacterSet]];
