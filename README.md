@@ -12,9 +12,23 @@ Faulting and relational data models are supported.
 How to use
 ----------
 
-Subclass your database objects from SIPROSMObject and add as many properties as necessary. Name all SQLite stored properties beginning with "sql_" (f.ex. "sql_mydata")
+Subclass your database objects from SISQLiteObject and add as many properties as necessary. Name all SQLite stored properties beginning with "sql_" (f.ex. "sql_mydata")
+If you declare the property a second time (with "assign" argument) you can use this property as well with the same values. For example with an example class called OSMWay and the following interface:
+	
+	#import "SISQLiteObject.h"
+	
+	@interface OSMWay : SISQLiteObject
 
-Set your properties by assigning to the property's name or via KVO methods without "sql_" prefix (f.ex. -(void)setMydata:(id)data). Accessormethods are created automatically on runtime.
+	@property (nonatomic) int16_t sql_adminlevel;
+	@property (assign) int64_t adminlevel;
+	
+	@end
+
+Set your properties by assigning to the property's name or via KVO methods without "sql_" prefix (f.ex. -(void)setMydata:(id)data). Accessormethods are created automatically on runtime. For example:
+
+	OSMWay* myWay = [[OSMWay alloc] init];
+	myWay.adminlevel = 1;
+	NSLog(@"adminlevel %i", myWay.adminlevel);
 
 Use NSArray or NSMutableArray classes for relational properties.
 
@@ -62,6 +76,10 @@ Load a faulted object from database:
 
 	[myFaultedObject loadObjectFromStore];
 
+##ARC
+
+This project uses ARC and is not usable without ARC.
+
 Todo
 ----
-
+- Initialize NSArray relationship objects programatically
