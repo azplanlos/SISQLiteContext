@@ -12,6 +12,7 @@
 #import "NSArray+containsString.h"
 #import "AQProperties.h"
 #import "NSArray+listOfKeys.h"
+#import "NSString+CapitalizedString.h"
 
 @implementation SISQLiteContext
 
@@ -149,6 +150,33 @@ static SISQLiteContext* _sisqlitecontext;
                 [self.dbQueue inDatabase:^(FMDatabase *db) {
                     [db executeUpdate:updateQuery];
                 }];
+            }
+            Class c = obj;
+            
+            __block NSString* xname = name;
+            IMP setterIMP = imp_implementationWithBlock(^(id _self, id value){
+                [_self setValue:value forKey:[NSString stringWithFormat:@"sql_%@", xname]];
+            });
+            
+            IMP getterIMP = imp_implementationWithBlock((id)^(id _self, SEL _xcmd) {
+               return [_self valueForKey:[NSString stringWithFormat:@"sql_%@", xname]];
+            });
+            
+            const char *greetingTypes =
+            [[NSString stringWithFormat:@"%s%s%s",
+              @encode(id), @encode(id), @encode(SEL)] UTF8String];
+            
+            const char *types2 =
+            [[NSString stringWithFormat:@"%s%s%s",
+              @encode(id), @encode(id), @encode(SEL)] UTF8String];
+            
+            if (!class_addMethod(c, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]), setterIMP, greetingTypes)) {
+                Method m = class_getClassMethod(obj, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]));
+                method_setImplementation(m, setterIMP);
+            }
+            if (!class_addMethod(c, NSSelectorFromString(name), getterIMP, types2)) {
+                Method m = class_getClassMethod(obj, NSSelectorFromString(name));
+                method_setImplementation(m, getterIMP);
             }
         }
     }
