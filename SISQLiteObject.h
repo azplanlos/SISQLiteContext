@@ -32,4 +32,7 @@
 -(void)loadObjectFromStore;
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
 -(void)mapFaultedChildsWithKey:(NSString*)key withObjects:(NSArray*)liveObjects;
+
+#pragma mark pseudo functions used internally!
+-(id)_sisqlite_userInit;
 @end

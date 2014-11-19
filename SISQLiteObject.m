@@ -20,6 +20,9 @@
     self.inDatabase = NO;
     isFaulted = NO;
     referenceKey = @"ID";
+    for (NSString* relKey in self.toManyRelationshipProperties) {
+        [self setValue:[NSMutableArray array] forKey:[NSString stringWithFormat:@"sql_%@", relKey]];
+    }
     //NSLog(@"properties: %@", [self allPropertyNames]);
     return self;
 }

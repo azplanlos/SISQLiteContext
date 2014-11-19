@@ -34,7 +34,7 @@ Set your properties by assigning to the property's name or via KVO methods witho
 	myWay.adminlevel = 1;
 	NSLog(@"adminlevel %i", myWay.adminlevel);
 
-Use NSArray or NSMutableArray classes for relational properties.
+Use **NSMutableArray** classes for relational child properties. You *DON'T* have to allocate and initialize these properties!
 
 Connect to a database:
 
@@ -86,4 +86,3 @@ This project uses ARC and is not usable without ARC.
 
 Todo
 ----
-- Initialize NSArray relationship objects programatically
