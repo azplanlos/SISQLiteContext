@@ -12,8 +12,8 @@ Faulting and relational data models are supported.
 How to use
 ----------
 
-Subclass your database objects from SISQLiteObject and add as many properties as necessary. Name all SQLite stored properties beginning with "sql_" (f.ex. "sql_mydata")
-If you declare the property a second time (with "assign" argument) you can use this property as well with the same values. For example with an example class called OSMWay and the following interface:
+Subclass your database objects from SISQLiteObject and add as many properties as necessary. Name all SQLite stored properties beginning with **"sql_"** (f.ex. "sql_mydata")
+If you declare the property a second time (with "assign" argument) you can use this property as well with the same values. Be aware that getter and setter method creation has to be declared as **@dynamic** in order to be overwritten. For example with an example class called OSMWay and the following interface:
 	
 	#import "SISQLiteObject.h"
 	
@@ -22,6 +22,10 @@ If you declare the property a second time (with "assign" argument) you can use t
 	@property (nonatomic) int16_t sql_adminlevel;
 	@property (assign) int64_t adminlevel;
 	
+	@end
+	
+	@implementation OSMWay
+	@dynamic adminlevel;
 	@end
 
 Set your properties by assigning to the property's name or via KVO methods without "sql_" prefix (f.ex. -(void)setMydata:(id)data). Accessormethods are created automatically on runtime. For example:

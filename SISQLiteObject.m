@@ -43,6 +43,10 @@
     isFaulted = YES;
 }
 
+-(void)setReferenceKey:(NSString *)newReferenceKey {
+    referenceKey = newReferenceKey;
+}
+
 -(void)saveAndDestroy {
     if (!isFaulted) [[SISQLiteContext SQLiteContext] updateObject:self];
 }
@@ -238,20 +242,24 @@
 }
 
 -(void)mapFaultedChildsWithKey:(NSString *)key withObjects:(NSArray *)liveObjects {
-    NSMutableArray* childs = [self valueForKey:key];
-    NSString* childRefKey = [childs.lastObject referenceKey];
-    NSArray* ids = [liveObjects stringArrayForValuesWithKey:childRefKey];
-    for (NSInteger i = 0; i < childs.count; i++) {
-        SISQLiteObject* child = [childs objectAtIndex:i];
-        id childVal = [child valueForKey:childRefKey];
-        if ([childVal isKindOfClass:[NSNumber class]]) childVal = [NSString stringWithFormat:@"%li", [childVal integerValue]];
-        NSInteger indexOfLive = [ids indexOfString:childVal];
-        if (indexOfLive != NSNotFound) {
-            [childs replaceObjectAtIndex:i withObject:[liveObjects objectAtIndex:indexOfLive]];
-        } else {
-            //NSLog(@"child not found with %@='%@'", childRefKey, childVal);
-            //[child loadObjectFromStore];
+    if ([[self valueForKey:[NSString stringWithFormat:@"sql_%@",key]] isKindOfClass:[NSArray class]]) {
+        NSMutableArray* childs = [self valueForKey:[NSString stringWithFormat:@"sql_%@",key]];
+        NSString* childRefKey = [childs.lastObject referenceKey];
+        NSArray* ids = [liveObjects stringArrayForValuesWithKey:childRefKey];
+        for (NSInteger i = 0; i < childs.count; i++) {
+            SISQLiteObject* child = [childs objectAtIndex:i];
+            id childVal = [child valueForKey:childRefKey];
+            if ([childVal isKindOfClass:[NSNumber class]]) childVal = [NSString stringWithFormat:@"%li", [childVal integerValue]];
+            NSInteger indexOfLive = [ids indexOfString:childVal];
+            if (indexOfLive != NSNotFound) {
+                [childs replaceObjectAtIndex:i withObject:[liveObjects objectAtIndex:indexOfLive]];
+            } else {
+                //NSLog(@"child not found with %@='%@'", childRefKey, childVal);
+                //[child loadObjectFromStore];
+            }
         }
+    } else {
+        NSLog(@"invalid property %@ on class %@ - property class %@", key, NSStringFromClass([self class]), NSStringFromClass([[self valueForKey:key] class]));
     }
 }
 
