@@ -43,6 +43,9 @@
 -(void)setReferenceValue:(id)newReferenceValue {
     referenceValue = newReferenceValue;
     [self setValue:newReferenceValue forKey:self.referenceKey];
+    if (![self.referenceKey isEqualToString:@"ID"]) {
+        [[SISQLiteContext SQLiteContext] indexValuesForKey:self.referenceKey forObject:[self class]];
+    }
     isFaulted = YES;
 }
 
@@ -125,7 +128,7 @@
         value = [NSNumber numberWithDouble:[value doubleValue]];
         
     }
-    [self setValue:value forKey:[NSString stringWithFormat:@"sql_%@", key]];
+    if (value) [self setValue:value forKey:[NSString stringWithFormat:@"sql_%@", key]];
 }
 
 -(NSArray*)sqlProperties {

@@ -13,6 +13,7 @@
 @class SISQLiteObject;
 
 @interface SISQLiteContext : NSObject {
+    NSMutableDictionary* tableIndexNames;
     NSMutableArray* cacheStatements;
     BOOL initialized;
 }
@@ -36,4 +37,5 @@
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString*)key andReferenceKey:(NSString*)referenceKey withValues:(NSString*)values,...;
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString*)key andReferenceKey:(NSString*)referenceKey withArrayValues:(NSArray*)values;
 -(NSArray*)liveObjectsFromArrayOfFaultedObjects:(NSArray*)faultedObjects;
+-(void)indexValuesForKey:(NSString*)key forObject:(Class)obj;
 @end

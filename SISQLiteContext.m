@@ -44,6 +44,7 @@ static SISQLiteContext* _sisqlitecontext;
         cacheStatements = [[NSMutableArray alloc] init];
         idField = @"ID";
         initialized = NO;
+        tableIndexNames = [NSMutableDictionary dictionary];
     }
     return self;
 }
@@ -128,8 +129,20 @@ static SISQLiteContext* _sisqlitecontext;
             NSString* query = [NSString stringWithFormat:@"PRAGMA table_info('%@');", stableName];
             FMResultSet* myResult = [db executeQuery:query];
             while ([myResult next]) {
-                NSLog(@"row %@", [myResult stringForColumn:@"name"]);
                 [tablePropNames addObject:[myResult stringForColumn:@"name"]];
+            }
+            query = [NSString stringWithFormat:@"PRAGMA index_list(%@);", stableName];
+            myResult = [db executeQuery:query];
+            while ([myResult next]) {
+                NSString* indexName = [myResult stringForColumn:@"name"];
+                query = [NSString stringWithFormat:@"PRAGMA index_info(%@);", indexName];
+                FMResultSet* columnsResult = [db executeQuery:query];
+                while ([columnsResult next]) {
+                    NSString* columnName = [columnsResult stringForColumn:@"name"];
+                    NSLog(@"found index for %@ and column %@", stableName, columnName);
+                    if (![tableIndexNames objectForKey:stableName]) [tableIndexNames setObject:[NSMutableArray array] forKey:stableName];
+                    [[tableIndexNames objectForKey:stableName] addObject:columnName];
+                }
             }
         }];
                 
@@ -193,6 +206,22 @@ static SISQLiteContext* _sisqlitecontext;
     initialized = YES;
 }
 
+-(void)indexValuesForKey:(NSString *)key forObject:(Class)obj {
+    NSMutableArray* arr = [tableIndexNames objectForKey:[NSStringFromClass(obj) lowercaseString]];
+    if (!arr) {
+        arr = [NSMutableArray array];
+        [tableIndexNames setObject:arr forKey:[NSStringFromClass(obj) lowercaseString]];
+    }
+    if (arr) {
+        if (![arr containsString:key]) {
+            NSLog(@"creating index for key %@ on database %@", key, [NSStringFromClass(obj) lowercaseString]);
+            NSString* query = [NSString stringWithFormat:@"CREATE UNIQUE INDEX %@_%@ ON %@ (%@);", [NSStringFromClass(obj) lowercaseString], key, [NSStringFromClass(obj) lowercaseString], key];
+            [cacheStatements addObject:query];
+            [arr addObject:key];
+        }
+    }
+}
+
 -(void)updateObject:(SISQLiteObject *)object {
     NSString* updString;
     if (!object.inDatabase) {
@@ -254,6 +283,7 @@ static SISQLiteContext* _sisqlitecontext;
             [retArray addObject:obj];
         }
     }];
+    [self synchronize];
     return [NSArray arrayWithArray:retArray];
 }
 
@@ -276,6 +306,7 @@ static SISQLiteContext* _sisqlitecontext;
             [retArray addObject:obj];
         }
     }];
+    [self synchronize];
     return retArray;
 }
 
