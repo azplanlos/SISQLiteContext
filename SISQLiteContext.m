@@ -115,9 +115,13 @@ static SISQLiteContext* _sisqlitecontext;
             if ([foundRelTables containsString:tableName]) {
                 
             } else {
-                NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT, 'parentRef' TEXT, 'parentRefKey' TEXT, 'childRef' TEXT, 'childRefKey' TEXT, 'childType' TEXT);", tableName];
+                NSString* query = [NSString stringWithFormat:@"CREATE TABLE '%@' ('ID' Integer NOT NULL PRIMARY KEY AUTOINCREMENT, 'parentRef' Integer, 'parentRefKey' TEXT, 'childRef' Integer, 'childRefKey' TEXT, 'childType' TEXT);", tableName];
+                NSString* query2 = [NSString stringWithFormat:@"CREATE INDEX '%@_childRef' ON '%@' (childRef);", tableName, tableName];
+                NSString* query3 = [NSString stringWithFormat:@"CREATE INDEX '%@_parentRef' ON '%@' (parentRef);", tableName, tableName];
                 [self.dbQueue inDatabase:^(FMDatabase *db) {
                     [db executeUpdate:query];
+                    [db executeUpdate:query2];
+                    [db executeUpdate:query3];
                 }];
                 NSLog(@"created table %@", tableName);
             }
@@ -334,7 +338,7 @@ static SISQLiteContext* _sisqlitecontext;
         else [valueString appendFormat:@"'%@'",[value description]];
         i++;
     }
-    NSString* query = [NSString stringWithFormat:@"SELECT DISTINCT parentRef FROM '%@-%@' WHERE childRefKey = '%@' AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
+    NSString* query = [NSString stringWithFormat:@"SELECT DISTINCT parentRef FROM '%@-%@' WHERE childRefKey = %@ AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
     //NSLog(@"query %@", query);
     return [self faultedResultsForStatement:query withClass:objectClass andReferenceKey:referenceKey fromTableColumn:@"parentRef"];
 }
