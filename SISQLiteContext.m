@@ -13,6 +13,8 @@
 #import "AQProperties.h"
 #import "NSArray+listOfKeys.h"
 #import "NSString+CapitalizedString.h"
+#import "NSString+appendToFile.h"
+#import "NSApplication+directories.h"
 
 @implementation SISQLiteContext
 
@@ -35,6 +37,10 @@ static SISQLiteContext* _sisqlitecontext;
         _sisqlitecontext = [super alloc];
         return _sisqlitecontext;
     }   return nil;
+}
+
+-(void)dealloc {
+    [self.dbQueue close];
 }
 
 -(id)init {
@@ -74,6 +80,7 @@ static SISQLiteContext* _sisqlitecontext;
 
 -(void)initDatabaseWithTableObjects:(NSArray*)tableObjects;
 {
+    availableObjects = tableObjects;
     for (id obj in tableObjects) {
         NSString* stableName = [[obj className] lowercaseString];
         NSLog(@"checking for table %@", stableName);
@@ -239,13 +246,18 @@ static SISQLiteContext* _sisqlitecontext;
     }
 }
 
+-(void)vacuum {
+    [self.dbQueue inDatabase:^(FMDatabase *db) {
+        [db executeUpdate:@"VACUUM;"];
+    }];
+}
+
 -(void)synchronize {
     NSLog(@"saving to db");
-    NSMutableString* statements = [NSMutableString string];
-    for (NSString* st in cacheStatements) [statements appendFormat:@" %@", st];
     [self.dbQueue inTransaction:^(FMDatabase *db, BOOL *rollback) {
-        [db executeStatements:statements];
+        for (NSString* st in cacheStatements) [db executeStatements:st];
     }];
+    [[cacheStatements componentsJoinedByString:@"\n"] appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_syncdump.sql"]];
     [cacheStatements removeAllObjects];
     NSLog(@"saved to db");
 }
@@ -257,6 +269,7 @@ static SISQLiteContext* _sisqlitecontext;
         FMResultSet* results = [db executeQuery:queryString];
         while ([results next]) {
             SISQLiteObject* obj = [[objectClass alloc] init];
+            obj.ID = [[results stringForColumn:@"ID"] integerValue];
             NSArray* sqlProps = [obj fullSqlProperties];
             for (NSString* key in sqlProps) {
                 id val;
@@ -287,7 +300,6 @@ static SISQLiteContext* _sisqlitecontext;
             [retArray addObject:obj];
         }
     }];
-    [self synchronize];
     return [NSArray arrayWithArray:retArray];
 }
 
@@ -310,7 +322,6 @@ static SISQLiteContext* _sisqlitecontext;
             [retArray addObject:obj];
         }
     }];
-    [self synchronize];
     return retArray;
 }
 
@@ -338,7 +349,7 @@ static SISQLiteContext* _sisqlitecontext;
         else [valueString appendFormat:@"'%@'",[value description]];
         i++;
     }
-    NSString* query = [NSString stringWithFormat:@"SELECT DISTINCT parentRef FROM '%@-%@' WHERE childRefKey = %@ AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
+    NSString* query = [NSString stringWithFormat:@"SELECT DISTINCT parentRef FROM '%@-%@' WHERE childRefKey = '%@' AND childRef IN (%@);", NSStringFromClass(objectClass).lowercaseString, key, referenceKey, valueString];
     //NSLog(@"query %@", query);
     return [self faultedResultsForStatement:query withClass:objectClass andReferenceKey:referenceKey fromTableColumn:@"parentRef"];
 }
@@ -359,6 +370,62 @@ static SISQLiteContext* _sisqlitecontext;
     }];
     if (goodConnection && initialized) return YES;
     return NO;
+}
+
+-(void)deleteObjectsForObject:(Class)objectClass withKey:(NSString *)key andValue:(id)value {
+    NSArray* delObjs = [self resultsForQuery:[NSString stringWithFormat:@"%@ = %@", key, value] withClass:objectClass];
+    for (SISQLiteObject* object in delObjs) {
+        [object deleteFromDatabase];
+    }
+    [self synchronize];
+}
+
+-(void)deleteUnreferencedObjectsForObject:(Class)objectClass withKey:(NSString *)key andValue:(id)value {
+    // get Object
+    NSArray* delObjs = [self resultsForQuery:[NSString stringWithFormat:@"%@ = %@", key, value] withClass:objectClass];
+    for (SISQLiteObject* object in delObjs) {
+        __block BOOL referenced = NO;
+        NSString* searchQuery = [object keyValuePairForChildRelation];
+        for (Class objectClass in availableObjects) {
+            SISQLiteObject* testObj = [[objectClass alloc] init];
+            for (NSString* multipleProp in [testObj toManyRelationshipProperties]) {
+                NSString* testQuery = [NSString stringWithFormat:@"SELECT ID FROM '%@-%@' WHERE childType = '%@' AND (%@);\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, NSStringFromClass([object class]), searchQuery];
+                [testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_dump.sql"]];
+                [self.dbQueue inDatabase:^(FMDatabase *db) {
+                    FMResultSet* result = [db executeQuery:testQuery];
+                    if ([result next]) {
+                        referenced = YES;
+                        //NSLog(@"referenced object (%@)", testQuery);
+                    }
+                    [db closeOpenResultSets];
+                }];
+            }
+        }
+        if (!referenced) [object deleteFromDatabase];
+    }
+    [self synchronize];
+}
+
+-(void)deleteObject:(SISQLiteObject *)object {
+    if (object.inDatabase) {
+        //NSLog(@"deleting %@ with ID %li", [NSStringFromClass([object class]) lowercaseString], object.ID);
+        [cacheStatements addObject:[NSString stringWithFormat:@"DELETE FROM %@ WHERE ID = %li;", [NSStringFromClass([object class]) lowercaseString], object.ID]];
+        NSString* searchQuery = [object keyValuePairForParentRelation];
+        NSString* searchQuery2 = [object keyValuePairForChildRelation];
+        for (Class objectClass in availableObjects) {
+            SISQLiteObject* testObj = [[objectClass alloc] init];
+            for (NSString* multipleProp in [testObj toManyRelationshipProperties]) {
+                NSString* testQuery = [NSString stringWithFormat:@"DELETE FROM '%@-%@' WHERE childType = '%@' AND (%@);\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, NSStringFromClass([object class]), searchQuery];
+                NSString* testQuery2 = [NSString stringWithFormat:@"DELETE FROM '%@-%@' WHERE %@;\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, searchQuery2];
+                //NSLog(@"query: %@", testQuery);
+                //NSLog(@"query2: %@", testQuery2);
+                [testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
+                [testQuery2 appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
+                [cacheStatements addObject:testQuery];
+                [cacheStatements addObject:testQuery2];
+            }
+        }
+    }
 }
 
 @end

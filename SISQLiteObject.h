@@ -28,10 +28,15 @@
 -(NSArray*)fullSqlProperties;
 -(NSArray*)fullSqlValues;
 -(NSArray*)toManyRelationshipProperties;
+-(NSString*)keyValueStringWithSeparator:(NSString*)separator;
+-(NSString*)keyValuePairForChildRelation;
+-(NSString*)keyValuePairForParentRelation;
 
 -(void)loadObjectFromStore;
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
 -(void)mapFaultedChildsWithKey:(NSString*)key withObjects:(NSArray*)liveObjects;
+
+-(void)deleteFromDatabase;
 
 #pragma mark pseudo functions used internally!
 -(id)_sisqlite_userInit;

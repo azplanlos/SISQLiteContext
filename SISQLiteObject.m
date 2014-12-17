@@ -63,7 +63,7 @@
         for (NSString* rel in self.toManyRelationshipProperties) {
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                retStr = [NSString stringWithFormat:@"%@ INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES ('%@', '%@', '%@', '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+                retStr = [NSString stringWithFormat:@"%@ INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
             }
         }
         return retStr;
@@ -83,9 +83,9 @@
         NSString* retStr = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
         for (NSString* rel in self.toManyRelationshipProperties) {
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
-            retStr = [NSString stringWithFormat:@"%@ DELETE FROM %@ WHERE parentRef = '%@' AND parentRefKey = '%@';", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey];
+            retStr = [NSString stringWithFormat:@"%@ DELETE FROM %@ WHERE parentRef = %@ AND parentRefKey = '%@';", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                retStr = [NSString stringWithFormat:@"%@ INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES ('%@', '%@', '%@', '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+                retStr = [NSString stringWithFormat:@"%@ INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
             }
         }
         return retStr;
@@ -268,5 +268,52 @@
         NSLog(@"invalid property %@ on class %@ - property class %@", key, NSStringFromClass([self class]), NSStringFromClass([[self valueForKey:key] class]));
     }
 }
+
+-(NSString*)keyValueStringWithSeparator:(NSString *)separator {
+    NSMutableString* retString = [NSMutableString string];
+    int i = 0;
+    for (NSString* key in self.sqlProperties) {
+        if (i != 0) [retString appendString:separator];
+        id val = [self valueForKey:key];
+        if ([val isKindOfClass:[NSNumber class]]) val = [NSString stringWithFormat:@"%f", [val doubleValue]];
+        else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        [retString appendFormat:@"%@ = %@", key, val];
+        i++;
+    }
+    return [NSString stringWithString:retString];
+}
+
+-(void)deleteFromDatabase {
+    [[SISQLiteContext SQLiteContext] deleteObject:self];
+}
+
+-(NSString*)keyValuePairForChildRelation {
+    NSMutableString* retString = [NSMutableString string];
+    int i = 0;
+    for (NSString* key in self.sqlProperties) {
+        if (i != 0) [retString appendString:@" OR "];
+        id val = [self valueForKey:key];
+        if ([val isKindOfClass:[NSNumber class]]) val = [NSString stringWithFormat:@"%f", [val doubleValue]];
+        else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        [retString appendFormat:@"(childRefKey = '%@' AND childRef = %@)", key, val];
+        i++;
+    }
+    return [NSString stringWithString:retString];
+}
+
+-(NSString*)keyValuePairForParentRelation {
+    NSMutableString* retString = [NSMutableString string];
+    int i = 0;
+    for (NSString* key in self.sqlProperties) {
+        if (i != 0) [retString appendString:@" OR "];
+        id val = [self valueForKey:key];
+        if ([val isKindOfClass:[NSNumber class]]) val = [NSString stringWithFormat:@"%f", [val doubleValue]];
+        else if ([val isKindOfClass:[NSString class]]) val = [NSString stringWithFormat:@"'%@'", val];
+        [retString appendFormat:@"(parentRefKey = '%@' AND parentRef = %@)", key, val];
+        i++;
+    }
+    return [NSString stringWithString:retString];
+}
+
 
 @end
