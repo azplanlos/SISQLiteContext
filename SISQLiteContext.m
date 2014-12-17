@@ -257,7 +257,7 @@ static SISQLiteContext* _sisqlitecontext;
     [self.dbQueue inTransaction:^(FMDatabase *db, BOOL *rollback) {
         for (NSString* st in cacheStatements) [db executeStatements:st];
     }];
-    [[cacheStatements componentsJoinedByString:@"\n"] appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_syncdump.sql"]];
+    //[[cacheStatements componentsJoinedByString:@"\n"] appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_syncdump.sql"]];
     [cacheStatements removeAllObjects];
     NSLog(@"saved to db");
 }
@@ -390,7 +390,7 @@ static SISQLiteContext* _sisqlitecontext;
             SISQLiteObject* testObj = [[objectClass alloc] init];
             for (NSString* multipleProp in [testObj toManyRelationshipProperties]) {
                 NSString* testQuery = [NSString stringWithFormat:@"SELECT ID FROM '%@-%@' WHERE childType = '%@' AND (%@);\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, NSStringFromClass([object class]), searchQuery];
-                [testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_dump.sql"]];
+                //[testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_dump.sql"]];
                 [self.dbQueue inDatabase:^(FMDatabase *db) {
                     FMResultSet* result = [db executeQuery:testQuery];
                     if ([result next]) {
@@ -419,8 +419,8 @@ static SISQLiteContext* _sisqlitecontext;
                 NSString* testQuery2 = [NSString stringWithFormat:@"DELETE FROM '%@-%@' WHERE %@;\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, searchQuery2];
                 //NSLog(@"query: %@", testQuery);
                 //NSLog(@"query2: %@", testQuery2);
-                [testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
-                [testQuery2 appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
+                //[testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
+                //[testQuery2 appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_del.sql"]];
                 [cacheStatements addObject:testQuery];
                 [cacheStatements addObject:testQuery2];
             }
