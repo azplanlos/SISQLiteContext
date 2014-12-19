@@ -381,28 +381,45 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(void)deleteUnreferencedObjectsForObject:(Class)objectClass withKey:(NSString *)key andValue:(id)value {
-    // get Object
-    NSArray* delObjs = [self resultsForQuery:[NSString stringWithFormat:@"%@ = %@", key, value] withClass:objectClass];
-    for (SISQLiteObject* object in delObjs) {
-        __block BOOL referenced = NO;
-        NSString* searchQuery = [object keyValuePairForChildRelation];
-        for (Class objectClass in availableObjects) {
-            SISQLiteObject* testObj = [[objectClass alloc] init];
-            for (NSString* multipleProp in [testObj toManyRelationshipProperties]) {
-                NSString* testQuery = [NSString stringWithFormat:@"SELECT ID FROM '%@-%@' WHERE childType = '%@' AND (%@);\n", [NSStringFromClass([testObj class]) lowercaseString], multipleProp, NSStringFromClass([object class]), searchQuery];
-                //[testQuery appendToFileAtURL:[[NSApplication appSupportURL] URLByAppendingPathComponent:@"sql_dump.sql"]];
-                [self.dbQueue inDatabase:^(FMDatabase *db) {
-                    FMResultSet* result = [db executeQuery:testQuery];
-                    if ([result next]) {
-                        referenced = YES;
-                        //NSLog(@"referenced object (%@)", testQuery);
-                    }
-                    [db closeOpenResultSets];
-                }];
-            }
+
+    NSMutableString* propQuery = [NSMutableString string];
+    NSMutableString* childRelDelQuery = [NSMutableString string];
+    for (Class availObjectClass in availableObjects) {
+        SISQLiteObject* testObj = [[availObjectClass alloc] init];
+        for (NSString* multipleProp in [testObj toManyRelationshipProperties]) {
+            NSMutableString* xpropQuery = [NSMutableString string];
+            [self.dbQueue inDatabase:^(FMDatabase *db) {
+                FMResultSet* results = [db executeQuery:[NSString stringWithFormat:@"SELECT childRefKey FROM '%@-%@' GROUP BY childRefKey;", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp]];
+                while ([results next]) {
+                    [propQuery appendFormat:@" AND NOT EXISTS (SELECT parentRef FROM '%@-%@' WHERE childType = '%@' AND childRefKey = '%@' AND childRef = %@.%@)", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp,NSStringFromClass(objectClass), [results stringForColumn:@"childRefKey"], [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"]];
+                    [xpropQuery appendFormat:@" AND NOT EXISTS (SELECT ID FROM %@ WHERE %@ = '%@-%@'.childRef)", [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"], [NSStringFromClass(availObjectClass) lowercaseString], multipleProp];
+                }
+            }];
+            [childRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE childType = '%@' %@;", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp, NSStringFromClass(objectClass), xpropQuery];
         }
-        if (!referenced) [object deleteFromDatabase];
     }
+    NSMutableString* parentRelDelQuery = [NSMutableString string];
+    
+    for (NSString* multipleProp in [[[objectClass alloc] init] toManyRelationshipProperties]) {
+        NSMutableString* propQuery = [NSMutableString string];
+        [self.dbQueue inDatabase:^(FMDatabase *db) {
+            FMResultSet* results = [db executeQuery:[NSString stringWithFormat:@"SELECT parentRefKey FROM '%@-%@' GROUP BY childRefKey;", [NSStringFromClass(objectClass) lowercaseString], multipleProp]];
+            while ([results next]) {
+                if (propQuery.length > 0) [propQuery appendString:@" OR "];
+                [propQuery appendFormat:@"(parentRefKey = '%@' AND parentRef NOT IN (SELECT %@ FROM %@))", [results stringForColumn:@"parentRefKey"], [results stringForColumn:@"parentRefKey"], [NSStringFromClass(objectClass) lowercaseString]];
+            }
+        }];
+        [parentRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE %@;", [NSStringFromClass(objectClass) lowercaseString], multipleProp, propQuery];
+    }
+    
+    NSString* queryString = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = %@ %@;",[NSStringFromClass(objectClass) lowercaseString], key, value, propQuery];
+    
+    [self.dbQueue inTransaction:^(FMDatabase *db, BOOL *rollback) {
+        [db executeUpdate:queryString];
+        [db executeStatements:parentRelDelQuery];
+        [db executeStatements:childRelDelQuery];
+    }];
+
     [self synchronize];
 }
 
