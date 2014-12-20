@@ -10,25 +10,20 @@
 #import "FMDB.h"
 #import "NSArray+ArrayForKeypath.h"
 
-@class SISQLiteObject;
+@class SISQLiteObject, SISQLiteDatabase;
 
 @interface SISQLiteContext : NSObject {
-    NSMutableDictionary* tableIndexNames;
-    NSMutableArray* cacheStatements;
-    NSArray* availableObjects;
     BOOL initialized;
+    NSMutableArray* dbQueues;
 }
 
-@property (strong) FMDatabaseQueue* dbQueue;
-@property (assign) NSUInteger cacheItemSize;
-@property (strong) NSString* idField;
 @property (readonly) BOOL isDatabaseReady;
 
 +(SISQLiteContext*)SQLiteContext;
 
--(void)loadDatabaseFromURL:(NSURL*)fileUrl;
--(void)initDatabaseWithTableObjects:(NSArray*)tableObjects;
+-(SISQLiteDatabase*)attachDatabaseAtURL:(NSURL*)dbURL forObjectClasses:(NSArray*)objects;
 -(void)synchronize;
+-(void)detachDatabase:(SISQLiteDatabase*)db;
 
 -(void)updateObject:(SISQLiteObject*)object;
 -(void)deleteObject:(SISQLiteObject*)object;

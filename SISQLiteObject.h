@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "NSObject+Properties.h"
+#import "SISQLiteDatabase.h"
 
 @interface SISQLiteObject : NSObject
 @property (assign) BOOL inDatabase;
@@ -16,6 +17,7 @@
 @property (strong, nonatomic) NSString* referenceKey;
 @property (strong, nonatomic) id referenceValue;
 @property (assign, readonly) BOOL isFaulted;
+@property (strong) SISQLiteDatabase* database;
 
 +(id)faultedObjectWithReferenceKey:(NSString*)string andValue:(id)refValue;
 -(id)initFaultedWithReferenceKey:(NSString*)string andValue:(id)refValue;
@@ -39,5 +41,4 @@
 -(void)deleteFromDatabase;
 
 #pragma mark pseudo functions used internally!
--(id)_sisqlite_userInit;
 @end
