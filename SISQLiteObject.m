@@ -11,6 +11,7 @@
 #import "NSArray+listOfKeys.h"
 #import "AQProperties.h"
 #import "NSArray+containsString.h"
+#import "NSObject+emphasize.h"
 
 @implementation SISQLiteObject
 @synthesize inDatabase, ID, isFaulted, referenceKey, referenceValue;
@@ -23,7 +24,16 @@
     for (NSString* relKey in self.toManyRelationshipProperties) {
         [self setValue:[NSMutableArray array] forKey:[NSString stringWithFormat:@"sql_%@", relKey]];
     }
-    //NSLog(@"properties: %@", [self allPropertyNames]);
+    for (NSString* propKey in self.sqlProperties) {
+        NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", propKey]]];
+        if ([type rangeOfString:@"String"].location != NSNotFound) {
+            [self setValue:@"" forKey:[NSString stringWithFormat:@"sql_%@", propKey]];
+        } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
+//
+        } else {
+            [self setValue:@(0) forKey:[NSString stringWithFormat:@"sql_%@", propKey]];
+        }
+    }
     return self;
 }
 
@@ -36,7 +46,6 @@
     self = [self init];
     self.referenceKey = key;
     self.referenceValue = refValue;
-    //[self setValue:refValue forKey:[NSString stringWithFormat:@"sql_%@",key]];
     return self;
 }
 
@@ -49,6 +58,10 @@
     isFaulted = YES;
 }
 
+-(id)referenceValue {
+    return [self valueForKey:self.referenceKey];
+}
+
 -(void)setReferenceKey:(NSString *)newReferenceKey {
     referenceKey = newReferenceKey;
 }
@@ -59,11 +72,12 @@
 
 -(NSString*)insertStatement {
     if (!self.isFaulted) {
-        NSString* retStr = [NSString stringWithFormat:@"INSERT INTO %@ (%@) VALUES (%@);", self.table, self.fullSqlProperties.commaSeparatedList,self.fullSqlValues.commaSeparatedList];
+        NSMutableString* retStr = [NSMutableString string];
+        [retStr appendFormat:@"INSERT INTO %@ (%@) VALUES (%@);", self.table, self.fullSqlProperties.commaSeparatedList,self.fullSqlValues.commaSeparatedList];
         for (NSString* rel in self.toManyRelationshipProperties) {
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                retStr = [NSString stringWithFormat:@"%@ INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+                [retStr appendFormat:@" INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [[child valueForKey:child.referenceKey] emphasizedDescription], child.referenceKey, [child className]];
             }
         }
         return retStr;
@@ -80,12 +94,12 @@
             [setString appendFormat:@"%@=%@", prop, [[self sqlValues] objectAtIndex:[[self sqlProperties]indexOfString:prop]]];
             i++;
         }
-        NSString* retStr = [NSString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
+        NSMutableString* retStr = [NSMutableString stringWithFormat:@"UPDATE %@ SET %@ WHERE ID = %li;", self.table, setString, self.ID];
         for (NSString* rel in self.toManyRelationshipProperties) {
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
-            retStr = [NSString stringWithFormat:@"%@ DELETE FROM %@ WHERE parentRef = %@ AND parentRefKey = '%@';", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey];
+            [retStr appendFormat:@" DELETE FROM %@ WHERE parentRef = %@ AND parentRefKey = '%@';", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                retStr = [NSString stringWithFormat:@"%@ INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", retStr, tableName, [self valueForKey:self.referenceKey], self.referenceKey, [child valueForKey:child.referenceKey], child.referenceKey, [child className]];
+                [retStr appendFormat:@" INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [[child valueForKey:child.referenceKey] emphasizedDescription], child.referenceKey, [child className]];
             }
         }
         return retStr;
@@ -188,7 +202,7 @@
 -(NSArray*)fullSqlValues {
     NSMutableArray* retArray = [NSMutableArray array];
     for (NSString* prop in self.fullSqlProperties) {
-        id val = [self valueForKey:prop];
+        id val = [self valueForKey:[NSString stringWithFormat:@"sql_%@", prop]];
         if ([val isKindOfClass:[NSNumber class]]) {
             //NSLog(@"number for %@", prop);
             if ([val isEqualToNumber:[NSNumber numberWithLongLong:188238674]]) {
@@ -198,7 +212,8 @@
         } else if ([val isKindOfClass:[NSString class]]) {
             NSMutableCharacterSet *charactersToRemove = [NSMutableCharacterSet alphanumericCharacterSet];
             [charactersToRemove formUnionWithCharacterSet:[NSCharacterSet nonBaseCharacterSet]];
-            [charactersToRemove removeCharactersInString:@"'´`;"];
+            [charactersToRemove removeCharactersInString:@"'´`;\""];
+            [charactersToRemove addCharactersInString:@"-_."];
             [charactersToRemove invert];
             val = [[val componentsSeparatedByCharactersInSet:charactersToRemove] componentsJoinedByString:@" "];
             val = [NSString stringWithFormat:@"'%@'", val];
@@ -213,6 +228,7 @@
             }
             val = [NSString stringWithFormat:@"'%@'", val2];
         }
+        //if (!val) val = @"''";
         [retArray addObject:val];
     }
     return retArray;
