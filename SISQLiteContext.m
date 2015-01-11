@@ -18,6 +18,8 @@
 
 @implementation SISQLiteContext
 
+@synthesize availableClasses;
+
 static SISQLiteContext* _sisqlitecontext;
 
 +(SISQLiteContext*)SQLiteContext {
@@ -42,6 +44,7 @@ static SISQLiteContext* _sisqlitecontext;
     if (self != nil) {
         initialized = NO;
         dbQueues = [NSMutableArray array];
+        availableClasses = [NSMutableArray array];
     }
     return self;
 }

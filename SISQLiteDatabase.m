@@ -6,6 +6,7 @@
 //  Copyright (c) 2014 Studio Istanbul Medya Hiz. Tic. Ltd. Sti. All rights reserved.
 //
 
+#import "SISQLiteContext.h"
 #import "SISQLiteDatabase.h"
 #import "SISQLiteObject.h"
 #import "NSArray+containsString.h"
@@ -59,7 +60,6 @@
 {
     for (id obj in tableObjects) {
         NSString* stableName = [[obj className] lowercaseString];
-        NSLog(@"checking for table %@", stableName);
         
         SISQLiteObject* testObj = [[obj alloc] init];
         
@@ -126,7 +126,6 @@
                 FMResultSet* columnsResult = [db executeQuery:query];
                 while ([columnsResult next]) {
                     NSString* columnName = [columnsResult stringForColumn:@"name"];
-                    NSLog(@"found index for %@ and column %@", stableName, columnName);
                     if (![tableIndexNames objectForKey:stableName]) [tableIndexNames setObject:[NSMutableArray array] forKey:stableName];
                     [[tableIndexNames objectForKey:stableName] addObject:columnName];
                 }
@@ -152,43 +151,45 @@
                 }];
             }
             
-            
-            Class c = obj;
-            
-            __block NSString* xname = name;
-            IMP setterIMP = imp_implementationWithBlock(^(id _self, id value){
-                [_self setValue:value forUndefinedKey:xname];
-            });
-            
-            IMP getterIMP = imp_implementationWithBlock((id)^(id _self) {
-                return [_self valueForUndefinedKey:xname];
-            });
-            
-            const char *greetingTypes =
-            [[NSString stringWithFormat:@"%s%s%s",
-              @encode(void), @encode(id), @encode(SEL)] UTF8String];
-            
-            const char *types2 =
-            [[NSString stringWithFormat:@"%s%s%s",
-              @encode(id), @encode(id), @encode(SEL)] UTF8String];
-            
-            if (!class_addMethod(c, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]), setterIMP, greetingTypes)) {
-                Method m = class_getClassMethod(c, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]));
-                if (m != NULL) {
-                    method_setImplementation(m, setterIMP);
-                } else {
-                    NSLog(@"could not set setter for method %@ on %@!", [NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]], NSStringFromClass(obj));
+            if (![[[SISQLiteContext SQLiteContext] availableClasses] containsString:NSStringFromClass([testObj class])]) {
+                Class c = obj;
+                
+                __block NSString* xname = name;
+                IMP setterIMP = imp_implementationWithBlock(^(id _self, id value){
+                    [_self setValue:value forUndefinedKey:xname];
+                });
+                
+                IMP getterIMP = imp_implementationWithBlock((id)^(id _self) {
+                    return [_self valueForUndefinedKey:xname];
+                });
+                
+                const char *greetingTypes =
+                [[NSString stringWithFormat:@"%s%s%s",
+                  @encode(void), @encode(id), @encode(SEL)] UTF8String];
+                
+                const char *types2 =
+                [[NSString stringWithFormat:@"%s%s%s",
+                  @encode(id), @encode(id), @encode(SEL)] UTF8String];
+                
+                if (!class_addMethod(c, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]), setterIMP, greetingTypes)) {
+                    Method m = class_getClassMethod(c, NSSelectorFromString([NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]]));
+                    if (m != NULL) {
+                        method_setImplementation(m, setterIMP);
+                    } else {
+                        NSLog(@"could not set setter for method %@ on %@!", [NSString stringWithFormat:@"set%@:", [name stringWithFirstLetterCapitalized]], NSStringFromClass(obj));
+                    }
                 }
-            }
-            if (!class_addMethod(c, NSSelectorFromString(name), getterIMP, types2)) {
-                Method m = class_getClassMethod(c, NSSelectorFromString(name));
-                if (m != NULL) {
-                    method_setImplementation(m, getterIMP);
-                } else {
-                    NSLog(@"could not set getter for method %@ on %@!", name, NSStringFromClass(obj));
+                if (!class_addMethod(c, NSSelectorFromString(name), getterIMP, types2)) {
+                    Method m = class_getClassMethod(c, NSSelectorFromString(name));
+                    if (m != NULL) {
+                        method_setImplementation(m, getterIMP);
+                    } else {
+                        NSLog(@"could not set getter for method %@ on %@!", name, NSStringFromClass(obj));
+                    }
                 }
             }
         }
+        [[[SISQLiteContext SQLiteContext] availableClasses] addObject:NSStringFromClass([testObj class])];
     }
     initialized = YES;
 }
@@ -209,7 +210,6 @@
         for (NSString* st in cacheStatements) [db executeStatements:st];
     }];
     [cacheStatements removeAllObjects];
-    NSLog(@"saved to db");
 }
 
 -(BOOL)isDatabaseReady {

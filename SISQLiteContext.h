@@ -18,6 +18,7 @@
 }
 
 @property (readonly) BOOL isDatabaseReady;
+@property (strong) NSMutableArray* availableClasses;
 
 +(SISQLiteContext*)SQLiteContext;
 
