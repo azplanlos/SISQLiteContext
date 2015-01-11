@@ -12,6 +12,7 @@
 #import "AQProperties.h"
 #import "NSArray+containsString.h"
 #import "NSObject+emphasize.h"
+#import "NSArray+ArrayForKeypath.h"
 
 @implementation SISQLiteObject
 @synthesize inDatabase, ID, isFaulted, referenceKey, referenceValue;
@@ -47,6 +48,10 @@
     self.referenceKey = key;
     self.referenceValue = refValue;
     return self;
+}
+
+-(NSString*)description {
+    return [NSString stringWithFormat:@"<%@: %@>", NSStringFromClass([self class]), [[self sqlValues] commaSeparatedList]];
 }
 
 -(void)setReferenceValue:(id)newReferenceValue {
@@ -282,6 +287,19 @@
         }
     } else {
         NSLog(@"invalid property %@ on class %@ - property class %@", key, NSStringFromClass([self class]), NSStringFromClass([[self valueForKey:key] class]));
+    }
+}
+
+-(void)unfaultChilds {
+    for (NSString* myProp in self.toManyRelationshipProperties) {
+        if (((NSMutableArray*)[self valueForKey:myProp]).count > 0) {
+            NSString* quoteString = @"";
+            NSString* xreferenceKey = ((SISQLiteObject*)((NSMutableArray*)[self valueForKey:myProp]).lastObject).referenceKey;
+            if ([[((SISQLiteObject*)((NSMutableArray*)[self valueForKey:myProp]).lastObject) valueForKey:xreferenceKey] isKindOfClass:[NSString class]]) quoteString = @"'";
+            NSString* queryString = [NSString stringWithFormat:@"%@ IN (%@)", xreferenceKey, [[((NSArray*)[self valueForKey:myProp]) arrayForValuesWithKey:xreferenceKey] commaSeparatedListWithQuoteString:quoteString]];
+            NSArray* childs = [self.database resultsForQuery:queryString withClass:[((SISQLiteObject*)((NSMutableArray*)[self valueForKey:myProp]).lastObject) class]];
+            [self mapFaultedChildsWithKey:myProp withObjects:childs];
+        }
     }
 }
 
