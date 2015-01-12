@@ -47,4 +47,6 @@
 -(NSArray*)liveObjectsFromArrayOfFaultedObjects:(NSArray *)faultedObjects;
 
 -(BOOL)hasContentsForClass:(Class)objectClass;
+
+-(NSInteger)maxIDforClass:(Class)objectClass;
 @end

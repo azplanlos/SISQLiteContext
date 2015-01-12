@@ -432,6 +432,17 @@
     return faultedObjects;
 }
 
+-(NSInteger)maxIDforClass:(Class)objectClass {
+    __block NSInteger maxId = -1;
+    [dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* result = [db executeQuery:[NSString stringWithFormat:@"SELECT max(ID) FROM %@;", [NSStringFromClass(objectClass) lowercaseString]]];
+        while ([result next]) {
+            maxId = [result longLongIntForColumnIndex:0];
+        }
+    }];
+    return maxId;
+}
+
 -(void)dealloc {
     [self.dbQueue close];
 }
