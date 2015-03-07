@@ -13,6 +13,7 @@
 #import "NSArray+containsString.h"
 #import "NSObject+emphasize.h"
 #import "NSArray+ArrayForKeypath.h"
+#import "NSObject+Properties.h"
 
 @implementation SISQLiteObject
 @synthesize inDatabase, ID, isFaulted, referenceKey, referenceValue;

@@ -7,8 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "FMDB.h"
-#import "NSArray+ArrayForKeypath.h"
 
 @class SISQLiteObject, SISQLiteDatabase;
 
