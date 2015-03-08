@@ -11,6 +11,7 @@
 		A9F8E3671AAD01F300BB3841 /* NSString+CapitalizedString.m in Sources */ = {isa = PBXBuildFile; fileRef = A9F8E3651AAD01F300BB3841 /* NSString+CapitalizedString.m */; };
 		A9F8E36A1AAD024600BB3841 /* NSArray+ArrayForKeypath.h in Headers */ = {isa = PBXBuildFile; fileRef = A9F8E3681AAD024600BB3841 /* NSArray+ArrayForKeypath.h */; };
 		A9F8E36B1AAD024600BB3841 /* NSArray+ArrayForKeypath.m in Sources */ = {isa = PBXBuildFile; fileRef = A9F8E3691AAD024600BB3841 /* NSArray+ArrayForKeypath.m */; };
+		A9F8E3721AAD0ACE00BB3841 /* NSObject+Properties.m in Sources */ = {isa = PBXBuildFile; fileRef = A9FAC46A1AAB24840005B4E6 /* NSObject+Properties.m */; };
 		A9FAC42A1AAB23C70005B4E6 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A9FAC4291AAB23C70005B4E6 /* Cocoa.framework */; };
 		A9FAC4341AAB23C70005B4E6 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = A9FAC4321AAB23C70005B4E6 /* InfoPlist.strings */; };
 		A9FAC44C1AAB23E70005B4E6 /* NSObject+emphasize.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4441AAB23E70005B4E6 /* NSObject+emphasize.h */; };
@@ -32,7 +33,7 @@
 		A9FAC47F1AAB24840005B4E6 /* NSArray+listOfKeys.m in Sources */ = {isa = PBXBuildFile; fileRef = A9FAC4641AAB24840005B4E6 /* NSArray+listOfKeys.m */; };
 		A9FAC4801AAB24840005B4E6 /* NSFileManager+DirectoryLocations.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4651AAB24840005B4E6 /* NSFileManager+DirectoryLocations.h */; };
 		A9FAC4811AAB24840005B4E6 /* NSFileManager+DirectoryLocations.m in Sources */ = {isa = PBXBuildFile; fileRef = A9FAC4661AAB24840005B4E6 /* NSFileManager+DirectoryLocations.m */; };
-		A9FAC4841AAB24840005B4E6 /* NSObject+Properties.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4691AAB24840005B4E6 /* NSObject+Properties.h */; };
+		A9FAC4841AAB24840005B4E6 /* NSObject+Properties.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4691AAB24840005B4E6 /* NSObject+Properties.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		A9FAC4AE1AAB41710005B4E6 /* FMDatabase.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4A31AAB416E0005B4E6 /* FMDatabase.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		A9FAC4AF1AAB41710005B4E6 /* FMDatabase.m in Sources */ = {isa = PBXBuildFile; fileRef = A9FAC4A41AAB416E0005B4E6 /* FMDatabase.m */; };
 		A9FAC4B01AAB41710005B4E6 /* FMDatabaseAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FAC4A51AAB416E0005B4E6 /* FMDatabaseAdditions.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -322,6 +323,7 @@
 				A9FAC4B81AAB41710005B4E6 /* FMResultSet.m in Sources */,
 				A9F8E3671AAD01F300BB3841 /* NSString+CapitalizedString.m in Sources */,
 				A9F8E36B1AAD024600BB3841 /* NSArray+ArrayForKeypath.m in Sources */,
+				A9F8E3721AAD0ACE00BB3841 /* NSObject+Properties.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
