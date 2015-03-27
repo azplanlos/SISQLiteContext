@@ -14,6 +14,7 @@
 #import "NSString+CapitalizedString.h"
 #import "NSArray+listOfKeys.h"
 #import "NSArray+ArrayForKeypath.h"
+#import "NSString+SQLQueryLanguage.h"
 
 @implementation SISQLiteDatabase
 @synthesize dbQueue, dbName, dbURL, availableClasses, initialized, idField, cacheItemSize;
@@ -441,6 +442,76 @@
         }
     }];
     return maxId;
+}
+
+-(NSNumber*)lowestValueForClass:(Class)objectClass andKey:(NSString *)key andQuery:(NSString *)query {
+    __block NSNumber* lowestNum;
+    NSString* queryString = [NSString stringWithFormat:@"SELECT min(%@) FROM %@;", key, [NSStringFromClass(objectClass) lowercaseString]];
+    if (query) {
+        queryString = [queryString stringByAppendingSqlPart:[NSString stringWithFormat:@"WHERE %@", query]];
+    }
+    [dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* result = [db executeQuery:queryString];
+        while ([result next]) {
+            lowestNum = [NSNumber numberWithDouble:[result doubleForColumnIndex:0]];
+        }
+    }];
+    return lowestNum;
+}
+
+-(NSNumber*)highestValueForClass:(Class)objectClass andKey:(NSString *)key andQuery:(NSString *)query {
+    __block NSNumber* highestNum;
+    NSString* queryString = [NSString stringWithFormat:@"SELECT max(%@) FROM %@;", key, [NSStringFromClass(objectClass) lowercaseString]];
+    if (query) {
+        queryString = [queryString stringByAppendingSqlPart:[NSString stringWithFormat:@"WHERE %@", query]];
+    }
+    [dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* result = [db executeQuery:queryString];
+        while ([result next]) {
+            highestNum = [NSNumber numberWithDouble:[result doubleForColumnIndex:0]];
+        }
+    }];
+    return highestNum;
+}
+
+//SELECT mode FROM chargedataset GROUP BY mode ORDER BY count(mode) ASC LIMIT 1;
+
+-(id)mostUsedValueForClass:(Class)objectClass andKey:(NSString *)key forQuery:(NSString *)query {
+    __block id mostUsed;
+    NSString* queryString = [NSString stringWithFormat:@"SELECT %@ FROM %@;", key, [NSStringFromClass(objectClass) lowercaseString]];
+    if (query) {
+        queryString = [queryString stringByAppendingSqlPart:[NSString stringWithFormat:@"WHERE %@", query]];
+    }
+    queryString = [queryString stringByAppendingSqlPart:[NSString stringWithFormat:@"GROUP BY %@ ORDER BY count(%@) DESC LIMIT 1", key, key]];
+    [dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* result = [db executeQuery:queryString];
+        while ([result next]) {
+            mostUsed = [result objectForColumnIndex:0];
+        }
+    }];
+    return mostUsed;
+}
+
+-(void)cleanDeviationForClass:(Class)objectClass withMaxDeviation:(double)maxDevPercent excludeProperties:(NSArray *)excludeArray {
+    SISQLiteObject* testObj = [[objectClass alloc] init];
+    for (NSString* prop in [testObj sqlProperties]) {
+        if (!excludeArray || [excludeArray containsString:prop] == NO) {
+            __block int num;
+            do {
+                num = 0;
+                [dbQueue inDatabase:^(FMDatabase *db) {
+                    NSString* queryString = [NSString stringWithFormat:@"CREATE TEMPORARY TABLE temp_%@ AS SELECT *, (SELECT %@ FROM %@ b WHERE b.ID < d.ID ORDER BY ID DESC LIMIT 1) AS prev_val, (SELECT  %@ FROM %@ c WHERE c.ID > d.ID ORDER BY ID ASC LIMIT 1) AS next_val, (SELECT AVG(%@) FROM %@) AS avg_val FROM %@ d WHERE abs(prev_val - d.%@) > abs(avg_val*%0.2f) AND d.%@ != 0 AND abs(prev_val - d.%@) > abs(avg_val*%0.2f) AND prev_val != 0 AND next_val != 0 ORDER BY d.ID;", [NSStringFromClass(objectClass) lowercaseString], prop, [NSStringFromClass(objectClass) lowercaseString], prop, [NSStringFromClass(objectClass) lowercaseString], prop, [NSStringFromClass(objectClass) lowercaseString], [NSStringFromClass(objectClass) lowercaseString], prop, maxDevPercent, prop, prop, maxDevPercent];
+                    [db executeUpdate:queryString];
+                    //NSLog(@"query: %@", queryString);
+                    if ([db executeUpdate:[NSString stringWithFormat:@"DELETE FROM %@ WHERE ID IN (SELECT ID FROM temp_%@);", [NSStringFromClass(objectClass) lowercaseString], [NSStringFromClass(objectClass) lowercaseString]]]) {
+                        num = [db changes];
+                        NSLog(@"deleted %i deviated values for %@ on %@", num, prop, [NSStringFromClass(objectClass) lowercaseString]);
+                    }
+                    [db executeUpdate:[NSString stringWithFormat:@"DROP TABLE temp_%@;", [NSStringFromClass(objectClass) lowercaseString]]];
+                }];
+            } while (num != 0);
+        }
+    }
 }
 
 -(void)dealloc {

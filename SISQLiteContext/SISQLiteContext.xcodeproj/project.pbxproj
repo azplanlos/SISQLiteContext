@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A940AAF81AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.h in Headers */ = {isa = PBXBuildFile; fileRef = A940AAF61AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.h */; };
+		A940AAF91AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.m in Sources */ = {isa = PBXBuildFile; fileRef = A940AAF71AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.m */; };
 		A9F8E3661AAD01F300BB3841 /* NSString+CapitalizedString.h in Headers */ = {isa = PBXBuildFile; fileRef = A9F8E3641AAD01F300BB3841 /* NSString+CapitalizedString.h */; };
 		A9F8E3671AAD01F300BB3841 /* NSString+CapitalizedString.m in Sources */ = {isa = PBXBuildFile; fileRef = A9F8E3651AAD01F300BB3841 /* NSString+CapitalizedString.m */; };
 		A9F8E36A1AAD024600BB3841 /* NSArray+ArrayForKeypath.h in Headers */ = {isa = PBXBuildFile; fileRef = A9F8E3681AAD024600BB3841 /* NSArray+ArrayForKeypath.h */; };
@@ -48,6 +50,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		A940AAF61AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "NSString+SQLQueryLanguage.h"; path = "../../NSString+SQLQueryLanguage.h"; sourceTree = "<group>"; };
+		A940AAF71AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "NSString+SQLQueryLanguage.m"; path = "../../NSString+SQLQueryLanguage.m"; sourceTree = "<group>"; };
 		A9F8E3641AAD01F300BB3841 /* NSString+CapitalizedString.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+CapitalizedString.h"; sourceTree = "<group>"; };
 		A9F8E3651AAD01F300BB3841 /* NSString+CapitalizedString.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+CapitalizedString.m"; sourceTree = "<group>"; };
 		A9F8E3681AAD024600BB3841 /* NSArray+ArrayForKeypath.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSArray+ArrayForKeypath.h"; sourceTree = "<group>"; };
@@ -159,6 +163,8 @@
 				A9FAC44A1AAB23E70005B4E6 /* SISQLiteObject.h */,
 				A9FAC44B1AAB23E70005B4E6 /* SISQLiteObject.m */,
 				A9FAC4301AAB23C70005B4E6 /* Supporting Files */,
+				A940AAF61AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.h */,
+				A940AAF71AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.m */,
 			);
 			path = SISQLiteContext;
 			sourceTree = "<group>";
@@ -241,6 +247,7 @@
 				A9FAC4B71AAB41710005B4E6 /* FMResultSet.h in Headers */,
 				A9F8E3661AAD01F300BB3841 /* NSString+CapitalizedString.h in Headers */,
 				A9F8E36A1AAD024600BB3841 /* NSArray+ArrayForKeypath.h in Headers */,
+				A940AAF81AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -324,6 +331,7 @@
 				A9F8E3671AAD01F300BB3841 /* NSString+CapitalizedString.m in Sources */,
 				A9F8E36B1AAD024600BB3841 /* NSArray+ArrayForKeypath.m in Sources */,
 				A9F8E3721AAD0ACE00BB3841 /* NSObject+Properties.m in Sources */,
+				A940AAF91AAEF6EA00EB9A36 /* NSString+SQLQueryLanguage.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

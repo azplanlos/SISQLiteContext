@@ -48,4 +48,11 @@
 -(BOOL)hasContentsForClass:(Class)objectClass;
 
 -(NSInteger)maxIDforClass:(Class)objectClass;
+
+-(NSNumber*)lowestValueForClass:(Class)objectClass andKey:(NSString*)key andQuery:(NSString*)query;
+-(NSNumber*)highestValueForClass:(Class)objectClass andKey:(NSString*)key andQuery:(NSString*)query;
+-(id)mostUsedValueForClass:(Class)objectClass andKey:(NSString*)key forQuery:(NSString*)query;
+
+-(void)cleanDeviationForClass:(Class)objectClass withMaxDeviation:(double)maxDevPercent excludeProperties:(NSArray*)excludeArray;
+
 @end
