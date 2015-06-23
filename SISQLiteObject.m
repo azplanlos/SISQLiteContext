@@ -349,5 +349,8 @@
     return [NSString stringWithString:retString];
 }
 
+-(void)willSaveObject {
+    // override in child class if needed!
+}
 
 @end

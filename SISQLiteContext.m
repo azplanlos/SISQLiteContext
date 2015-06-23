@@ -80,6 +80,7 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(void)updateObject:(SISQLiteObject *)object {
+    [object willSaveObject];
     NSString* updString;
     if (!object.inDatabase) {
         updString = [object insertStatement];

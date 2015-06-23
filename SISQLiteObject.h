@@ -39,6 +39,8 @@
 -(NSArray*)parentObjectsWithClass:(Class)objectClass andReferenceKey:(NSString*)xreferenceKey;
 -(void)mapFaultedChildsWithKey:(NSString*)key withObjects:(NSArray*)liveObjects;
 
+-(void)willSaveObject;
+
 -(void)deleteFromDatabase;
 
 #pragma mark pseudo functions used internally!
