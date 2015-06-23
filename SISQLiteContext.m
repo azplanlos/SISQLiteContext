@@ -13,7 +13,6 @@
 #import "AQProperties.h"
 #import "NSArray+listOfKeys.h"
 #import "NSString+CapitalizedString.h"
-#import "NSString+appendToFile.h"
 #import "NSApplication+directories.h"
 
 @implementation SISQLiteContext

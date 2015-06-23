@@ -7,7 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "NSObject+Properties.h"
 #import "SISQLiteDatabase.h"
 
 @interface SISQLiteObject : NSObject

@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 Studio Istanbul Medya Hiz. Tic. Ltd. Sti. All rights reserved.
 //
 
-#import <iMedia/iMedia.h>
 #import "FMDB.h"
 
 @class SISQLiteObject;
@@ -49,4 +48,11 @@
 -(BOOL)hasContentsForClass:(Class)objectClass;
 
 -(NSInteger)maxIDforClass:(Class)objectClass;
+
+-(NSNumber*)lowestValueForClass:(Class)objectClass andKey:(NSString*)key andQuery:(NSString*)query;
+-(NSNumber*)highestValueForClass:(Class)objectClass andKey:(NSString*)key andQuery:(NSString*)query;
+-(id)mostUsedValueForClass:(Class)objectClass andKey:(NSString*)key forQuery:(NSString*)query;
+
+-(void)cleanDeviationForClass:(Class)objectClass withMaxDeviation:(double)maxDevPercent excludeProperties:(NSArray*)excludeArray;
+
 @end
