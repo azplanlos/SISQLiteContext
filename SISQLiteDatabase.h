@@ -55,4 +55,6 @@
 
 -(void)cleanDeviationForClass:(Class)objectClass withMaxDeviation:(double)maxDevPercent excludeProperties:(NSArray*)excludeArray;
 
+-(NSArray*)affectedClasses; // classes with updated objects since init
+
 @end

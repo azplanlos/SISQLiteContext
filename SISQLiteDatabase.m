@@ -16,6 +16,11 @@
 #import "NSArray+ArrayForKeypath.h"
 #import "NSString+SQLQueryLanguage.h"
 
+@interface SISQLiteDatabase () {
+    NSMutableDictionary* tableUpdate;
+}
+@end
+
 @implementation SISQLiteDatabase
 @synthesize dbQueue, dbName, dbURL, availableClasses, initialized, idField, cacheItemSize;
 
@@ -59,8 +64,11 @@
 
 -(void)initDatabaseWithTableObjects:(NSArray*)tableObjects;
 {
+    tableUpdate = [NSMutableDictionary dictionaryWithCapacity:tableObjects.count];
     for (id obj in tableObjects) {
         NSString* stableName = [[obj className] lowercaseString];
+        
+        [tableUpdate setValue:[NSNumber numberWithBool:NO] forKey:stableName];
         
         SISQLiteObject* testObj = [[obj alloc] init];
         
@@ -318,6 +326,7 @@
     } else {
         updString = [object updateStatement];
     }
+    [tableUpdate setValue:[NSNumber numberWithBool:YES] forKey:[NSStringFromClass([object class])lowercaseString]];
     [cacheStatements addObject:updString];
     if (cacheStatements.count > self.cacheItemSize) {
         [self synchronize];
@@ -516,6 +525,15 @@
 
 -(void)dealloc {
     [self.dbQueue close];
+}
+
+-(NSArray*)affectedClasses {
+    NSMutableArray* arr = [NSMutableArray array];
+    for (NSString* key in tableUpdate.allKeys) {
+        if ([[tableUpdate valueForKey:key] boolValue]) [arr addObject:key];
+    }
+    NSLog(@"%li classes affected", arr.count);
+    return [NSArray arrayWithArray:arr];
 }
 
 @end

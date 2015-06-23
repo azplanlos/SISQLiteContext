@@ -73,7 +73,7 @@
 }
 
 -(void)saveAndDestroy {
-    if (!isFaulted) [[SISQLiteContext SQLiteContext] updateObject:self];
+    if (!isFaulted) [self.database updateObject:self];
 }
 
 -(NSString*)insertStatement {
@@ -233,6 +233,14 @@
                 i++;
             }
             val = [NSString stringWithFormat:@"'%@'", val2];
+        } else if ([val isKindOfClass:[NSDate class]]) {
+            NSDateFormatter *dateFormat = [[NSDateFormatter alloc] init];
+            [dateFormat setDateFormat:@"yyyy-MM-dd"];
+            NSDateFormatter *timeFormat = [[NSDateFormatter alloc] init];
+            [timeFormat setDateFormat:@"HH:mm:ss"];
+            NSString *theDate = [dateFormat stringFromDate:val];
+            NSString *theTime = [timeFormat stringFromDate:val];
+            val = [NSString stringWithFormat:@"'%@ %@'", theDate, theTime];
         }
         //if (!val) val = @"''";
         [retArray addObject:val];
