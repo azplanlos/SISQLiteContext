@@ -307,6 +307,7 @@
             if ([[((SISQLiteObject*)((NSMutableArray*)[self valueForKey:myProp]).lastObject) valueForKey:xreferenceKey] isKindOfClass:[NSString class]]) quoteString = @"'";
             NSString* queryString = [NSString stringWithFormat:@"%@ IN (%@)", xreferenceKey, [[((NSArray*)[self valueForKey:myProp]) arrayForValuesWithKey:xreferenceKey] commaSeparatedListWithQuoteString:quoteString]];
             NSArray* childs = [self.database resultsForQuery:queryString withClass:[((SISQLiteObject*)((NSMutableArray*)[self valueForKey:myProp]).lastObject) class]];
+            if (childs.count !=  ((NSMutableArray*)[self valueForKey:myProp]).count) NSLog(@"received %li %@ for %@ #%li expected %li (query: %@)", childs.count, myProp, NSStringFromClass([self class]), self.ID, ((NSMutableArray*)[self valueForKey:myProp]).count, queryString);
             [self mapFaultedChildsWithKey:myProp withObjects:childs];
         }
     }

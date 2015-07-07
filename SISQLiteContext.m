@@ -49,22 +49,29 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(SISQLiteDatabase*)attachDatabaseAtURL:(NSURL *)dbURL forObjectClasses:(NSArray *)objects {
-    SISQLiteDatabase* db = [[SISQLiteDatabase alloc] initWithURL:dbURL andObjects:objects];
-    [dbQueues addObject:db];
-    initialized = YES;
+    SISQLiteDatabase* db;
+    @synchronized(dbQueues) {
+        db = [[SISQLiteDatabase alloc] initWithURL:dbURL andObjects:objects];
+        [dbQueues addObject:db];
+        initialized = YES;
+    }
     return db;
 }
 
 -(void)detachDatabase:(SISQLiteDatabase*)db {
-    [db closeDB];
-    [dbQueues removeObject:db];
+    @synchronized(dbQueues) {
+        [db closeDB];
+        [dbQueues removeObject:db];
+    }
 }
 
 -(NSArray*)performOnAllDatabasesWithClass:(Class)objectClass runBlock:(NSArray* (^)(SISQLiteDatabase *db))block {
     NSMutableArray* retArray = [NSMutableArray array];
-    for (SISQLiteDatabase* db in dbQueues) {
-        if ([db hasContentsForClass:objectClass]) {
-            [retArray addObjectsFromArray:block(db)];
+    @synchronized(dbQueues) {
+        for (SISQLiteDatabase* db in dbQueues) {
+            if ([db hasContentsForClass:objectClass]) {
+                [retArray addObjectsFromArray:block(db)];
+            }
         }
     }
     return [NSArray arrayWithArray:retArray];
@@ -72,10 +79,12 @@ static SISQLiteContext* _sisqlitecontext;
 
 -(void)indexValuesForKey:(NSString *)key forObject:(Class)obj {
     // run on all databases
-    [self performOnAllDatabasesWithClass:obj runBlock:^NSArray *(SISQLiteDatabase *db) {
-        [db indexValuesForKey:key forObject:obj];
-        return [NSArray array];
-    }];
+    @synchronized(dbQueues) {
+        [self performOnAllDatabasesWithClass:obj runBlock:^NSArray *(SISQLiteDatabase *db) {
+            [db indexValuesForKey:key forObject:obj];
+            return [NSArray array];
+        }];
+    }
 }
 
 -(void)updateObject:(SISQLiteObject *)object {
@@ -95,11 +104,15 @@ static SISQLiteContext* _sisqlitecontext;
 }
 
 -(void)vacuum {
-    for (SISQLiteDatabase* db in dbQueues) [db vacuum];
+    @synchronized(dbQueues) {
+        for (SISQLiteDatabase* db in dbQueues) [db vacuum];
+    }
 }
 
 -(void)synchronize {
-    for (SISQLiteDatabase* db in dbQueues) [db synchronize];
+    @synchronized(dbQueues) {
+        for (SISQLiteDatabase* db in dbQueues) [db synchronize];
+    }
 }
 
 -(NSArray*)executeQuery:(NSString*)queryString withClass:(Class)objectClass {
