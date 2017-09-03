@@ -116,7 +116,7 @@
 -(id)valueForUndefinedKey:(NSString *)key {
     if ([key rangeOfString:@"sql_"].location != 0 && [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]]) {
         NSString* type = [NSString stringWithUTF8String:[self typeOfPropertyNamed:[NSString stringWithFormat:@"sql_%@", key]]];
-        if ([type rangeOfString:@"String"].location != NSNotFound) {
+        if ([type rangeOfString:@"String"].location != NSNotFound || [type rangeOfString:@"Date"].location != NSNotFound) {
             //NSLog(@"string for undefined key %@", key);
             return [self valueForKey:[NSString stringWithFormat:@"sql_%@", key]];
         } else if ([type rangeOfString:@"Array"].location != NSNotFound) {
@@ -133,6 +133,8 @@
             if ([type rangeOfString:@"NSString"].location != NSNotFound) {
                 //NSLog(@"string for undefined key %@", key);
                 return @"";
+            } else if ([type rangeOfString:@"NSDate"].location != NSNotFound) {
+                return [NSDate date];
             } else {
                 //NSLog(@"number for undefined key %@", key);
                 return @(0);

@@ -369,6 +369,10 @@
                             [val addObject:child];
                         }
                     }
+                } else if ([type rangeOfString:@"Date"].location != NSNotFound) {
+                    NSDateFormatter* dateFormat = [NSDateFormatter new];
+                    [dateFormat setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+                    val = [dateFormat dateFromString:[results stringForColumn:key]];
                 } else {
                     val = [NSNumber numberWithDouble:[results doubleForColumn:key]];
                 }
@@ -389,6 +393,25 @@
 -(NSArray*)resultsForHavingQuery:(NSString *)queryString withClass:(Class)objectClass {
     NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@ GROUP BY ID HAVING %@;", [NSStringFromClass(objectClass) lowercaseString], queryString];
     return [self executeQuery:query withClass:objectClass];
+}
+
+-(NSArray*)allObjectsForClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT * FROM %@;", [NSStringFromClass(objectClass) lowercaseString]];
+    return [self executeQuery:query withClass:objectClass];
+}
+
+-(SISQLiteObject*)objectWithHighestValueForKey:(NSString *)key inClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT max(%@),* FROM %@;", key, [NSStringFromClass(objectClass) lowercaseString]];
+    NSArray* result = [self executeQuery:query withClass:objectClass];
+    if (result && result.count > 0) return result.firstObject;
+    return nil;
+}
+
+-(SISQLiteObject*)objectWithLowestValueForKey:(NSString *)key inClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT min(%@),* FROM %@;", key, [NSStringFromClass(objectClass) lowercaseString]];
+    NSArray* result = [self executeQuery:query withClass:objectClass];
+    if (result && result.count > 0) return result.firstObject;
+    return nil;
 }
 
 -(NSArray*)faultedResultsForStatement:(NSString*)queryString withClass:(Class)objectClass andReferenceKey:(NSString*)referenceKey fromTableColumn:(NSString*)column {

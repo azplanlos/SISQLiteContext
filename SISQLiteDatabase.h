@@ -44,6 +44,9 @@
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString *)key andReferenceKey:(NSString *)referenceKey withValues:(NSString *)values, ...;
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString *)key andReferenceKey:(NSString *)referenceKey withArrayValues:(NSArray *)values;
 -(NSArray*)liveObjectsFromArrayOfFaultedObjects:(NSArray *)faultedObjects;
+-(NSArray*)allObjectsForClass:(Class)objectClass;
+-(SISQLiteObject*)objectWithHighestValueForKey:(NSString*)key inClass:(Class)objectClass;
+-(SISQLiteObject*)objectWithLowestValueForKey:(NSString*)key inClass:(Class)objectClass;
 
 -(BOOL)hasContentsForClass:(Class)objectClass;
 
