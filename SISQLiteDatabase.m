@@ -254,11 +254,11 @@
             [self.dbQueue inDatabase:^(FMDatabase *db) {
                 FMResultSet* results = [db executeQuery:[NSString stringWithFormat:@"SELECT childRefKey FROM '%@-%@' GROUP BY childRefKey;", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp]];
                 while ([results next]) {
-                    [propQuery appendFormat:@" AND NOT EXISTS (SELECT parentRef FROM '%@-%@' WHERE childType = '%@' AND childRefKey = '%@' AND childRef = %@.%@)", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp,NSStringFromClass(objectClass), [results stringForColumn:@"childRefKey"], [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"]];
-                    [xpropQuery appendFormat:@" AND NOT EXISTS (SELECT ID FROM %@ WHERE %@ = '%@-%@'.childRef)", [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"], [NSStringFromClass(availObjectClass) lowercaseString], multipleProp];
+                    [propQuery appendFormat:@" AND %@ NOT IN (SELECT childRef FROM '%@-%@' WHERE childType = '%@' AND childRefKey = '%@' AND childRef = %@.%@)", [results stringForColumn:@"childRefKey"], [NSStringFromClass(availObjectClass) lowercaseString], multipleProp,[NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"], [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"]];
+                    [xpropQuery appendFormat:@" AND childRef NOT IN (SELECT %@ FROM %@ WHERE %@ = '%@-%@'.childRef) AND parentRef NOT IN (SELECT %@ FROM %@ WHERE %@ = '%@-%@'.parentRef)", [results stringForColumn:@"childRefKey"], [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"], [NSStringFromClass(availObjectClass) lowercaseString], multipleProp, [results stringForColumn:@"childRefKey"], [NSStringFromClass(objectClass) lowercaseString], [results stringForColumn:@"childRefKey"], [NSStringFromClass(availObjectClass) lowercaseString], multipleProp];
                 }
             }];
-            [childRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE childType = '%@' %@;", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp, NSStringFromClass(objectClass), xpropQuery];
+            [childRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE %@;", [NSStringFromClass(availObjectClass) lowercaseString], multipleProp, xpropQuery];
         }
     }
     NSMutableString* parentRelDelQuery = [NSMutableString string];
@@ -272,15 +272,24 @@
                 [propQuery appendFormat:@"(parentRefKey = '%@' AND parentRef NOT IN (SELECT %@ FROM %@))", [results stringForColumn:@"parentRefKey"], [results stringForColumn:@"parentRefKey"], [NSStringFromClass(objectClass) lowercaseString]];
             }
         }];
-        [parentRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE %@;", [NSStringFromClass(objectClass) lowercaseString], multipleProp, propQuery];
+        [parentRelDelQuery appendFormat:@"DELETE FROM '%@-%@' WHERE parentType = '%@' AND %@;", [NSStringFromClass(objectClass) lowercaseString], multipleProp, [NSStringFromClass(objectClass) lowercaseString], propQuery];
     }
     
     NSString* queryString = [NSString stringWithFormat:@"DELETE FROM %@ WHERE %@ = %@ %@;",[NSStringFromClass(objectClass) lowercaseString], key, value, propQuery];
     
     [self.dbQueue inTransaction:^(FMDatabase *db, BOOL *rollback) {
-        [db executeUpdate:queryString];
-        [db executeStatements:parentRelDelQuery];
-        [db executeStatements:childRelDelQuery];
+        if (![db executeUpdate:queryString]) {
+            NSLog(@"error: %@", db.lastErrorMessage);
+            *rollback = YES;
+        };
+        if (![db executeStatements:parentRelDelQuery]) {
+            NSLog(@"error in deleting parent relations: %@", db.lastErrorMessage);
+            *rollback = YES;
+        }
+        if (![db executeStatements:childRelDelQuery]) {
+            NSLog(@"error in deleting child relations: %@", db.lastErrorMessage);
+            *rollback = YES;
+        }
     }];
     
     [self synchronize];
@@ -427,6 +436,18 @@
     return retArray;
 }
 
+-(long long)numberOfObjectsinClass:(Class)objectClass {
+    NSString* query = [NSString stringWithFormat:@"SELECT Count(*) FROM %@;", [NSStringFromClass(objectClass) lowercaseString]];
+    __block long long numberofobjects = 0;
+    [dbQueue inDatabase:^(FMDatabase *db) {
+        FMResultSet* result = [db executeQuery:query];
+        while ([result next]) {
+            numberofobjects = [result longLongIntForColumnIndex:0];
+        }
+    }];
+    return numberofobjects;
+}
+
 -(NSArray*)faultedObjectsForObject:(Class)objectClass withRelationKey:(NSString *)key andReferenceKey:(NSString *)referenceKey withValues:(NSString *)values, ... {
     id eachObject;
     va_list argumentList;
@@ -558,5 +579,7 @@
     NSLog(@"%li classes affected", arr.count);
     return [NSArray arrayWithArray:arr];
 }
+
+
 
 @end

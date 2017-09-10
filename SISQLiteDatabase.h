@@ -48,6 +48,8 @@
 -(SISQLiteObject*)objectWithHighestValueForKey:(NSString*)key inClass:(Class)objectClass;
 -(SISQLiteObject*)objectWithLowestValueForKey:(NSString*)key inClass:(Class)objectClass;
 
+-(long long)numberOfObjectsinClass:(Class)objectClass;
+
 -(BOOL)hasContentsForClass:(Class)objectClass;
 
 -(NSInteger)maxIDforClass:(Class)objectClass;

@@ -83,7 +83,7 @@
         for (NSString* rel in self.toManyRelationshipProperties) {
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                [retStr appendFormat:@" INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [[child valueForKey:child.referenceKey] emphasizedDescription], child.referenceKey, [child className]];
+                [retStr appendFormat:@" INSERT INTO '%@' (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [child.referenceValue emphasizedDescription], child.referenceKey, [NSStringFromClass([child class]) lowercaseString]];
             }
         }
         return retStr;
@@ -105,7 +105,7 @@
             NSString* tableName = [NSString stringWithFormat:@"%@-%@", self.table, rel];
             [retStr appendFormat:@" DELETE FROM %@ WHERE parentRef = %@ AND parentRefKey = '%@';", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey];
             for (SISQLiteObject* child in [self valueForKey:rel]) {
-                [retStr appendFormat:@" INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [[child valueForKey:child.referenceKey] emphasizedDescription], child.referenceKey, [child className]];
+                [retStr appendFormat:@" INSERT INTO %@ (parentRef, parentRefKey, childRef, childRefKey, childType) VALUES (%@, '%@', %@, '%@', '%@');", tableName, [[self valueForKey:self.referenceKey] emphasizedDescription], self.referenceKey, [child.referenceValue emphasizedDescription], child.referenceKey, [NSStringFromClass([child class]) lowercaseString]];
             }
         }
         return retStr;

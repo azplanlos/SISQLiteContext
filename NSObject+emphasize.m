@@ -11,7 +11,7 @@
 @implementation NSObject (emphasize)
 -(NSString*)emphasizedDescription {
     if ([self isKindOfClass:[NSNumber class]]) {
-        return [NSString stringWithFormat:@"%0.5f", ((NSNumber*)self).floatValue];
+        return [NSString stringWithFormat:@"%0.5f", ((NSNumber*)self).doubleValue];
     } else if ([self isKindOfClass:[NSString class]]) {
         return [NSString stringWithFormat:@"'%@'", self];
     }
